@@ -3,6 +3,11 @@
 Run the commands below from the repository root. For downloads, the video and
 screenshots, see the [project page](../README.md).
 
+Optional [project support](support.md) is available from **Support development**
+in the sidebar and on the successful-build page. The choices open only when
+clicked, never interrupt a build, and never unlock features. Payments happen
+on the selected provider's website, not inside the app.
+
 **WinUI 3 desktop application with a C# image builder.** Its step-by-step layout
 uses the [S9 WoA installer](https://github.com/ntdevlabs/exynos9810-woa) as a reference.
 It does not wrap or execute the PowerShell builders. The original scripts remain
