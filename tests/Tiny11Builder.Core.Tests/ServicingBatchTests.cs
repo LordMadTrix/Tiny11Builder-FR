@@ -66,7 +66,7 @@ public sealed class CapabilityBatchTests
 
     [Theory]
     [InlineData("Installed", "still present")]
-    [InlineData("Uninstall Pending", "removal pending")]
+    [InlineData("Install Pending", "unexpected pending state")]
     [InlineData("Surprise", "unrecognised state")]
     public async Task A_batch_whose_absence_is_not_proven_fails_with_a_distinct_diagnostic(string state, string diagnostic)
     {
@@ -145,11 +145,11 @@ public sealed class CapabilityBatchTests
     public async Task A_failed_Turbo_capability_batch_fails_every_member_and_the_build_and_discards_the_mount()
     {
         using var fixture = Fixture("App.StepsRecorder~~~~0.0.1.0");
-        fixture.Runner.CapabilityStateAfterRemoval = "Uninstall Pending";
+        fixture.Runner.CapabilityStateAfterRemoval = "Install Pending";
         var events = new List<BuildProgress>();
         var failure = await Assert.ThrowsAsync<BuildFailureException>(() => fixture.Engine.BuildAsync(
             CapabilityRecipe(fixture, turbo: true), new ImmediateProgress<BuildProgress>(events.Add), CancellationToken.None));
-        Assert.Contains("removal pending", failure.Message);
+        Assert.Contains("unexpected pending state", failure.Message);
         Assert.All(new[] { "App.StepsRecorder~~~~0.0.1.0", "Language.OCR~~~en-US~0.0.1.0" }, id =>
             Assert.Equal(BuildOperationState.Failed, events.Last(item => item.OperationId == "capability:" + id).State));
         Assert.Contains(fixture.Runner.Calls, call => call.Contains("/Unmount-Image") && call.Contains("/Discard"));
