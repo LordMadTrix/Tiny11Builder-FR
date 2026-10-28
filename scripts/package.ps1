@@ -1,10 +1,11 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [ValidateSet('x64', 'arm64')]
     [string]$Architecture = 'x64',
     [string]$RestoreSource = ''
 )
 
+Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 $project = Join-Path $root 'src\Tiny11Builder.App\Tiny11Builder.App.csproj'
@@ -84,3 +85,4 @@ try {
 finally {
     Remove-Item -LiteralPath $stage -Recurse -Force
 }
+

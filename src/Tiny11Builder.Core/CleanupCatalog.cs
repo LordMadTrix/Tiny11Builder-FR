@@ -81,6 +81,9 @@ public static class CleanupCatalog
             CleanupPreset.Balanced => o.Balanced,
             CleanupPreset.Minimal => o.Minimal,
             CleanupPreset.Original => o.Kind == OptionKind.App || o.Id is not ("language-extras" or "legacy-capabilities"),
+            CleanupPreset.Privacy => o.Id is "copilot-app" or "news-weather" or "feedback" or "phone" or "social"
+                or "recall-feature" or "ads" or "privacy" or "copilot" or "widgets" or "search" or "onedrive"
+                or "edge" or "oobe" or "device-encryption" or "onedrive-files" or "edge-files",
             _ => false
         })
         .Select(o => o.Id).ToArray();

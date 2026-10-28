@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 namespace Tiny11Builder.Core;
 
 public enum Compression { Recovery, Maximum, Fast }
-public enum CleanupPreset { Balanced, Minimal, Original, Custom }
+public enum CleanupPreset { Balanced, Minimal, Original, Privacy, Custom }
 public enum BuildFlavor { Regular, Core }
 public enum BuildMode { Tiny11, Tiny11Core, Custom }
 public enum OptionKind { App, Feature, Capability, Policy, File }

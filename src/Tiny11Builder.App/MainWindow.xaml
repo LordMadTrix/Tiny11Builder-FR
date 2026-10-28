@@ -284,6 +284,7 @@
                                              Message="Core supprime les fichiers de composants et WinRE, et désactive Windows Update et Defender. Vous ne pourrez pas ajouter de mises à jour, langues ou fonctionnalités par la suite. Testez l'image dans une VM."/>
                                     <TextBlock x:Name="CoreConsentStatus" Visibility="Collapsed" Text="Il vous sera demandé d'accepter les limitations de Core avant de continuer." Style="{StaticResource Secondary}"/>
                                     <TextBlock x:Name="SelectionCount" Style="{StaticResource Secondary}"/>
+                                    <TextBlock x:Name="EstimatedSpaceText" FontWeight="SemiBold" Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
                                 </StackPanel>
                             </Border>
                             <StackPanel x:Name="CustomChoices" Visibility="Collapsed" Spacing="18">
@@ -329,10 +330,10 @@
                                             </StackPanel>
                                         </Button>
 
-                                        <Button Grid.Column="2" HorizontalAlignment="Stretch" Click="OnPresetTiny11Standard" ToolTipService.ToolTip="Profil d'origine de Tiny11 avec suppression d'Edge et OneDrive.">
+                                        <Button Grid.Column="2" HorizontalAlignment="Stretch" Click="OnPresetPrivacy" ToolTipService.ToolTip="Neutralise la télémétrie, Copilot, Recall 24H2, Bing Search, Widgets, Edge et OneDrive.">
                                             <StackPanel Orientation="Horizontal" Spacing="8">
-                                                <FontIcon Glyph="&#xE7F4;" FontSize="14"/>
-                                                <TextBlock Text="Tiny11 Standard"/>
+                                                <FontIcon Glyph="&#xE727;" FontSize="14" Foreground="{ThemeResource SystemFillColorCautionBrush}"/>
+                                                <TextBlock Text="Confidentialité"/>
                                             </StackPanel>
                                         </Button>
 

@@ -914,6 +914,13 @@ public sealed partial class MainWindow : Window
         UpdateCounts();
     }
 
+    private void OnPresetPrivacy(object sender, RoutedEventArgs args)
+    {
+        var ids = CleanupCatalog.ForPreset(CleanupPreset.Privacy).ToHashSet();
+        foreach (var choice in options) choice.Selected = ids.Contains(choice.Option.Id);
+        UpdateCounts();
+    }
+
     private void OnPresetTiny11Standard(object sender, RoutedEventArgs args)
     {
         var ids = CleanupCatalog.ForPreset(CleanupPreset.Original).ToHashSet();
@@ -946,8 +953,50 @@ public sealed partial class MainWindow : Window
     {
         if (!initialized) return;
         var custom = inventory.Count > 0 ? inventory.Count(i => i.Selected) : pendingActions.Length;
-        SelectionCount.Text = $"{options.Count(o => o.Selected)} groupes de suppression sélectionnés · {custom} actions avancées";
+        var selectedOpts = options.Where(o => o.Selected).ToList();
+        SelectionCount.Text = $"{selectedOpts.Count} groupes de suppression sélectionnés · {custom} actions avancées";
         ExpertCount.Text = $"{inventory.Count:N0} composants listés · {custom:N0} actions avancées sélectionnées.";
+
+        double isoSavedGb = 0.0;
+        double diskSavedGb = 0.0;
+        foreach (var opt in selectedOpts)
+        {
+            if (opt.Option.Id.Contains("edge", StringComparison.OrdinalIgnoreCase))
+            {
+                isoSavedGb += 0.45;
+                diskSavedGb += 1.25;
+            }
+            else if (opt.Option.Id.Contains("onedrive", StringComparison.OrdinalIgnoreCase))
+            {
+                isoSavedGb += 0.18;
+                diskSavedGb += 0.55;
+            }
+            else if (opt.Option.Kind == OptionKind.App)
+            {
+                isoSavedGb += 0.09;
+                diskSavedGb += 0.28;
+            }
+            else
+            {
+                isoSavedGb += 0.04;
+                diskSavedGb += 0.15;
+            }
+        }
+        if (UsesCore)
+        {
+            isoSavedGb += 0.85;
+            diskSavedGb += 3.40;
+        }
+        if (CompactCheck?.IsOn == true) diskSavedGb += 2.60;
+        if (RedundantDataCheck?.IsOn == true) { isoSavedGb += 0.35; diskSavedGb += 1.10; }
+        isoSavedGb += custom * 0.03;
+        diskSavedGb += custom * 0.10;
+
+        if (EstimatedSpaceText is not null)
+        {
+            EstimatedSpaceText.Text = $"💾 Gain estimé : ~{diskSavedGb:F1} Go libérés sur le disque installé (~{isoSavedGb:F1} Go sur l'image ISO)";
+        }
+
         UpdateNavigation();
     }
 
