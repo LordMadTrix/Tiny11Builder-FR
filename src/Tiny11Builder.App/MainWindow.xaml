@@ -858,5 +858,38 @@
                 <InfoBar x:Name="SupportError" IsOpen="False" IsClosable="True" Severity="Error"/>
             </StackPanel>
         </ContentDialog>
+        <!-- Dialogue Natif Création Clé USB Bootable (Sans console externe) -->
+        <ContentDialog x:Name="UsbDialog" Title="Créer une Clé USB Bootable UEFI"
+                       PrimaryButtonText="Créer la clé USB" CloseButtonText="Annuler"
+                       DefaultButton="Primary">
+            <StackPanel Spacing="16" MaxWidth="480">
+                <TextBlock Text="Préparez une clé USB d'installation prête à démarrer sur tout PC moderne (UEFI / GPT / FAT32)." Style="{StaticResource Secondary}"/>
+                
+                <TextBox x:Name="UsbIsoPathBox" Header="Fichier image ISO Windows" IsReadOnly="True"
+                         PlaceholderText="Sélectionnez une image ISO..."/>
+
+                <StackPanel Spacing="8">
+                    <Grid ColumnSpacing="8">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <ComboBox x:Name="UsbDisksCombo" Header="Clé USB de destination" HorizontalAlignment="Stretch"
+                                  PlaceholderText="Recherche des disques USB..."/>
+                        <Button Grid.Column="1" VerticalAlignment="Bottom" ToolTipService.ToolTip="Actualiser les disques" Click="OnRefreshUsbDisks">
+                            <FontIcon Glyph="&#xE72C;" FontSize="14"/>
+                        </Button>
+                    </Grid>
+                </StackPanel>
+
+                <InfoBar IsOpen="True" IsClosable="False" Severity="Warning"
+                         Title="Attention au formatage"
+                         Message="Toutes les données présentes sur la clé USB sélectionnée seront définitivement effacées."/>
+
+                <StackPanel x:Name="UsbProgressPanel" Spacing="8" Visibility="Collapsed">
+                    <ProgressBar x:Name="UsbProgressBar" IsIndeterminate="True"/>
+                    <TextBlock x:Name="UsbStatusText" Text="Préparation en cours..." Style="{StaticResource Hint}"/>
+                </StackPanel>
+
+                <InfoBar x:Name="UsbErrorNotice" IsOpen="False" IsClosable="True" Severity="Error"/>
+            </StackPanel>
+        </ContentDialog>
     </Grid>
 </Window>

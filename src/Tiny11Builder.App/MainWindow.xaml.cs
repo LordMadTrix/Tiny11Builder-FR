@@ -1744,18 +1744,18 @@ public sealed partial class MainWindow : Window
         if (result is not null) OpenFolder(Path.GetDirectoryName(result.IsoPath)!);
     }
 
-    private void OnCreateBootableUsb(object sender, RoutedEventArgs args)
+    private async void OnCreateBootableUsb(object sender, RoutedEventArgs args)
     {
-        if (result is null || string.IsNullOrWhiteSpace(result.IsoPath) || !File.Exists(result.IsoPath))
+        var isoPath = result?.IsoPath;
+        if (string.IsNullOrWhiteSpace(isoPath) || !File.Exists(isoPath))
         {
-            ShowNotice("Image ISO introuvable", "L'image ISO générée n'a pas pu être localisée.", InfoBarSeverity.Warning);
-            return;
+            isoPath = OutputBox?.Text?.Trim();
         }
 
-        LaunchUsbCreationScript(result.IsoPath);
+        await OpenUsbDialogAsync(isoPath);
     }
 
-    private void OnLaunchUsbTool(object sender, RoutedEventArgs args)
+    private async void OnLaunchUsbTool(object sender, RoutedEventArgs args)
     {
         var candidateIso = result?.IsoPath;
         if (string.IsNullOrWhiteSpace(candidateIso) || !File.Exists(candidateIso))
@@ -1768,44 +1768,181 @@ public sealed partial class MainWindow : Window
             candidateIso = null;
         }
 
-        LaunchUsbCreationScript(candidateIso);
+        await OpenUsbDialogAsync(candidateIso);
     }
 
-    private void LaunchUsbCreationScript(string? isoPath)
+    private async Task OpenUsbDialogAsync(string? preferredIso)
     {
+        if (UsbDialog == null) return;
+
+        UsbDialog.XamlRoot = this.Content.XamlRoot;
+        UsbIsoPathBox.Text = string.IsNullOrWhiteSpace(preferredIso) ? (OutputBox?.Text ?? SourcePathBox?.Text ?? "") : preferredIso;
+        UsbErrorNotice.IsOpen = false;
+        UsbProgressPanel.Visibility = Visibility.Collapsed;
+        UsbDialog.IsPrimaryButtonEnabled = true;
+
+        await RefreshUsbDisksAsync();
+
+        UsbDialog.PrimaryButtonClick -= OnUsbDialogPrimaryClick;
+        UsbDialog.PrimaryButtonClick += OnUsbDialogPrimaryClick;
+
+        await UsbDialog.ShowAsync();
+    }
+
+    private async void OnRefreshUsbDisks(object sender, RoutedEventArgs args)
+    {
+        await RefreshUsbDisksAsync();
+    }
+
+    private async Task RefreshUsbDisksAsync()
+    {
+        if (UsbDisksCombo == null) return;
+        UsbDisksCombo.Items.Clear();
+
         try
         {
-            var baseDir = AppContext.BaseDirectory;
-            var scriptPath = Path.Combine(baseDir, "Create-Tiny11BootableUSB.ps1");
-            if (!File.Exists(scriptPath))
+            var psi = new ProcessStartInfo
             {
-                var projectFallback = Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", "Create-Tiny11BootableUSB.ps1"));
-                if (File.Exists(projectFallback)) scriptPath = projectFallback;
-            }
-
-            if (!File.Exists(scriptPath))
-            {
-                ShowNotice("Script introuvable", "Le script Create-Tiny11BootableUSB.ps1 est introuvable.", InfoBarSeverity.Error);
-                return;
-            }
-
-            var args = "\"-NoProfile\" \"-ExecutionPolicy\" \"Bypass\" \"-File\" \"" + scriptPath + "\"";
-            if (!string.IsNullOrWhiteSpace(isoPath))
-            {
-                args += " -IsoPath \"" + isoPath + "\"";
-            }
-
-            var startInfo = new ProcessStartInfo("powershell.exe", args)
-            {
-                UseShellExecute = true,
-                Verb = "runas"
+                FileName = "powershell.exe",
+                Arguments = "-NoProfile -ExecutionPolicy Bypass -Command \"Get-Disk | Where-Object { $_.BusType -eq 'USB' } | Select-Object -Property Number, FriendlyName, Size | ConvertTo-Json -Compress\"",
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                StandardOutputEncoding = System.Text.Encoding.UTF8
             };
 
-            Process.Start(startInfo);
+            using var proc = Process.Start(psi);
+            if (proc != null)
+            {
+                var output = await proc.StandardOutput.ReadToEndAsync();
+                await proc.WaitForExitAsync();
+
+                output = output?.Trim();
+                if (!string.IsNullOrEmpty(output))
+                {
+                    if (output.StartsWith("["))
+                    {
+                        var disks = System.Text.Json.JsonDocument.Parse(output);
+                        foreach (var el in disks.RootElement.EnumerateArray())
+                        {
+                            var num = el.GetProperty("Number").GetInt32();
+                            var name = el.GetProperty("FriendlyName").GetString();
+                            var sizeBytes = el.GetProperty("Size").GetInt64();
+                            var sizeGb = Math.Round((double)sizeBytes / (1024 * 1024 * 1024), 1);
+                            UsbDisksCombo.Items.Add(new ComboBoxItem { Content = $"Disque {num} : {name} ({sizeGb} Go)", Tag = num });
+                        }
+                    }
+                    else if (output.StartsWith("{"))
+                    {
+                        var el = System.Text.Json.JsonDocument.Parse(output).RootElement;
+                        var num = el.GetProperty("Number").GetInt32();
+                        var name = el.GetProperty("FriendlyName").GetString();
+                        var sizeBytes = el.GetProperty("Size").GetInt64();
+                        var sizeGb = Math.Round((double)sizeBytes / (1024 * 1024 * 1024), 1);
+                        UsbDisksCombo.Items.Add(new ComboBoxItem { Content = $"Disque {num} : {name} ({sizeGb} Go)", Tag = num });
+                    }
+                }
+            }
         }
         catch (Exception ex)
         {
-            ShowNotice("Erreur de lancement", $"Impossible de démarrer l'utilitaire USB : {ex.Message}", InfoBarSeverity.Error);
+            System.Diagnostics.Debug.WriteLine($"Erreur détection USB: {ex.Message}");
+        }
+
+        if (UsbDisksCombo.Items.Count > 0)
+        {
+            UsbDisksCombo.SelectedIndex = 0;
+        }
+        else
+        {
+            UsbDisksCombo.Items.Add(new ComboBoxItem { Content = "Aucune clé USB détectée", Tag = -1 });
+            UsbDisksCombo.SelectedIndex = 0;
+        }
+    }
+
+    private async void OnUsbDialogPrimaryClick(ContentDialog sender, ContentDialogButtonClickEventArgs args)
+    {
+        args.Cancel = true;
+
+        var isoPath = UsbIsoPathBox?.Text?.Trim();
+        if (string.IsNullOrWhiteSpace(isoPath) || !File.Exists(isoPath))
+        {
+            UsbErrorNotice.Title = "ISO invalide";
+            UsbErrorNotice.Message = "Veuillez vous assurer que le fichier ISO existe.";
+            UsbErrorNotice.IsOpen = true;
+            return;
+        }
+
+        if (UsbDisksCombo?.SelectedItem is not ComboBoxItem selectedItem || selectedItem.Tag is not int diskNumber || diskNumber < 0)
+        {
+            UsbErrorNotice.Title = "Aucune clé sélectionnée";
+            UsbErrorNotice.Message = "Veuillez sélectionner une clé USB valide.";
+            UsbErrorNotice.IsOpen = true;
+            return;
+        }
+
+        var baseDir = AppContext.BaseDirectory;
+        var scriptPath = Path.Combine(baseDir, "Create-Tiny11BootableUSB.ps1");
+        if (!File.Exists(scriptPath))
+        {
+            var projectFallback = Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", "Create-Tiny11BootableUSB.ps1"));
+            if (File.Exists(projectFallback)) scriptPath = projectFallback;
+        }
+
+        if (!File.Exists(scriptPath))
+        {
+            UsbErrorNotice.Title = "Script introuvable";
+            UsbErrorNotice.Message = "Le script Create-Tiny11BootableUSB.ps1 est introuvable.";
+            UsbErrorNotice.IsOpen = true;
+            return;
+        }
+
+        UsbErrorNotice.IsOpen = false;
+        UsbProgressPanel.Visibility = Visibility.Visible;
+        UsbStatusText.Text = "Partitionnement et création de la clé en arrière-plan...";
+        UsbProgressBar.IsIndeterminate = true;
+        sender.IsPrimaryButtonEnabled = false;
+
+        var escapedScript = scriptPath.Replace("'", "''");
+        var escapedIso = isoPath.Replace("'", "''");
+        var cmdArgs = $"-NoProfile -ExecutionPolicy Bypass -File \"{escapedScript}\" -IsoPath \"{escapedIso}\" -DiskNumber {diskNumber} -Force -Quiet";
+
+        try
+        {
+            await Task.Run(() =>
+            {
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "powershell.exe",
+                    Arguments = cmdArgs,
+                    UseShellExecute = true,
+                    Verb = "runas",
+                    WindowStyle = ProcessWindowStyle.Hidden
+                };
+
+                using var proc = Process.Start(psi);
+                proc?.WaitForExit();
+                if (proc != null && proc.ExitCode != 0)
+                {
+                    throw new Exception($"Code d'erreur {proc.ExitCode}");
+                }
+            });
+
+            UsbProgressBar.IsIndeterminate = false;
+            UsbProgressBar.Value = 100;
+            UsbStatusText.Text = "Clé USB Bootable créée avec succès !";
+            sender.IsPrimaryButtonEnabled = false;
+            sender.CloseButtonText = "Fermer";
+        }
+        catch (Exception ex)
+        {
+            UsbProgressBar.IsIndeterminate = false;
+            UsbProgressPanel.Visibility = Visibility.Collapsed;
+            UsbErrorNotice.Title = "Erreur de création";
+            UsbErrorNotice.Message = ex.Message;
+            UsbErrorNotice.IsOpen = true;
+            sender.IsPrimaryButtonEnabled = true;
         }
     }
     private void OnOpenLogs(object sender, RoutedEventArgs args)

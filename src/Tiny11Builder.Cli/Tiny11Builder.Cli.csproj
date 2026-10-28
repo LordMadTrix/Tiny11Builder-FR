@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\Tiny11Builder.Core\Tiny11Builder.Core.csproj" />
@@ -9,6 +9,8 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <ApplicationIcon>..\Tiny11Builder.App\app.ico</ApplicationIcon>
+    <Version>0.5.2</Version>
   </PropertyGroup>
 
 </Project>
