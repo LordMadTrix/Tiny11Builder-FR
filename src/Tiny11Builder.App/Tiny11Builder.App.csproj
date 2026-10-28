@@ -1,10 +1,10 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows10.0.26100.0</TargetFramework>
     <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
     <AssemblyName>Tiny11Builder</AssemblyName>
-    <Version>0.3.0</Version>
+    <Version>0.4.0</Version>
     <RootNamespace>Tiny11Builder.App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <Platforms>x64;ARM64</Platforms>
@@ -25,5 +25,7 @@
     <ProjectReference Include="..\Tiny11Builder.Core\Tiny11Builder.Core.csproj" />
     <Manifest Include="$(ApplicationManifest)" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\scripts\Create-Tiny11BootableUSB.ps1" Link="Create-Tiny11BootableUSB.ps1" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>
-

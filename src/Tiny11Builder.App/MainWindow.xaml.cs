@@ -1743,6 +1743,71 @@ public sealed partial class MainWindow : Window
     {
         if (result is not null) OpenFolder(Path.GetDirectoryName(result.IsoPath)!);
     }
+
+    private void OnCreateBootableUsb(object sender, RoutedEventArgs args)
+    {
+        if (result is null || string.IsNullOrWhiteSpace(result.IsoPath) || !File.Exists(result.IsoPath))
+        {
+            ShowNotice("Image ISO introuvable", "L'image ISO générée n'a pas pu être localisée.", InfoBarSeverity.Warning);
+            return;
+        }
+
+        LaunchUsbCreationScript(result.IsoPath);
+    }
+
+    private void OnLaunchUsbTool(object sender, RoutedEventArgs args)
+    {
+        var candidateIso = result?.IsoPath;
+        if (string.IsNullOrWhiteSpace(candidateIso) || !File.Exists(candidateIso))
+        {
+            candidateIso = OutputBox?.Text?.Trim() ?? SourcePathBox?.Text?.Trim();
+        }
+
+        if (string.IsNullOrWhiteSpace(candidateIso) || !File.Exists(candidateIso))
+        {
+            candidateIso = null;
+        }
+
+        LaunchUsbCreationScript(candidateIso);
+    }
+
+    private void LaunchUsbCreationScript(string? isoPath)
+    {
+        try
+        {
+            var baseDir = AppContext.BaseDirectory;
+            var scriptPath = Path.Combine(baseDir, "Create-Tiny11BootableUSB.ps1");
+            if (!File.Exists(scriptPath))
+            {
+                var projectFallback = Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", "Create-Tiny11BootableUSB.ps1"));
+                if (File.Exists(projectFallback)) scriptPath = projectFallback;
+            }
+
+            if (!File.Exists(scriptPath))
+            {
+                ShowNotice("Script introuvable", "Le script Create-Tiny11BootableUSB.ps1 est introuvable.", InfoBarSeverity.Error);
+                return;
+            }
+
+            var args = "\"-NoProfile\" \"-ExecutionPolicy\" \"Bypass\" \"-File\" \"" + scriptPath + "\"";
+            if (!string.IsNullOrWhiteSpace(isoPath))
+            {
+                args += " -IsoPath \"" + isoPath + "\"";
+            }
+
+            var startInfo = new ProcessStartInfo("powershell.exe", args)
+            {
+                UseShellExecute = true,
+                Verb = "runas"
+            };
+
+            Process.Start(startInfo);
+        }
+        catch (Exception ex)
+        {
+            ShowNotice("Erreur de lancement", $"Impossible de démarrer l'utilitaire USB : {ex.Message}", InfoBarSeverity.Error);
+        }
+    }
     private void OnOpenLogs(object sender, RoutedEventArgs args)
     {
         if (workDirectory is null) return;

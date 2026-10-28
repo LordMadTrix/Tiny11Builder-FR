@@ -68,6 +68,12 @@
                     <Button x:Name="ResumeButton" Content="Reprendre la création" Click="OnResume" HorizontalAlignment="Stretch"
                             AutomationProperties.HelpText="Reprendre une création interrompue à partir de la progression enregistrée."/>
                     <Button x:Name="RecoverButton" Content="Nettoyer l'espace de travail" Click="OnRecover" HorizontalAlignment="Stretch"/>
+                    <Button x:Name="UsbToolButton" Click="OnLaunchUsbTool" HorizontalAlignment="Stretch">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <FontIcon Glyph="&#xEC8E;" FontSize="14"/>
+                            <TextBlock Text="Créer Clé USB Bootable"/>
+                        </StackPanel>
+                    </Button>
                     <ComboBox x:Name="ThemeChoice" Header="Apparence" SelectionChanged="OnThemeChanged" HorizontalAlignment="Stretch" SelectedIndex="0">
                         <ComboBoxItem Content="Système"/><ComboBoxItem Content="Clair"/><ComboBoxItem Content="Sombre"/>
                     </ComboBox>
@@ -733,6 +739,12 @@
                                     <StackPanel Orientation="Horizontal" Spacing="12">
                                         <Button Content="Ouvrir le dossier de sortie" Click="OnOpenOutputFolder"/>
                                         <Button Content="Ouvrir les journaux et le rapport" Click="OnOpenLogs"/>
+                                        <Button x:Name="CreateUsbButton" Style="{StaticResource AccentButtonStyle}" Click="OnCreateBootableUsb">
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <FontIcon Glyph="&#xEC8E;" FontSize="14"/>
+                                                <TextBlock Text="Créer une clé USB Bootable"/>
+                                            </StackPanel>
+                                        </Button>
                                     </StackPanel>
                                     <TextBlock Text="Testez l'image ISO dans une machine virtuelle avant de l'installer." Style="{StaticResource Hint}"/>
                                     <StackPanel Spacing="4">
