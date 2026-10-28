@@ -5,8 +5,7 @@ using Tiny11Builder.Core;
 
 namespace Tiny11Builder.App;
 
-// This file intentionally has no WinUI types, so the same source runs under the unit tests.
-// XAML derives Visibility from the bool properties below.
+// Ce fichier ne contient aucun type WinUI afin de pouvoir être testé sous les tests unitaires.
 public abstract class ObservableChoice : INotifyPropertyChanged
 {
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -37,26 +36,24 @@ public sealed class InventoryChoice(ImageInventoryItem item) : ObservableChoice
     public ImageInventoryItem Item { get; } = item;
     public string Title => Item.Identity;
     public string Detail => $"{Item.Kind} · {Item.Detail}";
-    public string Risk => Item.Protected ? "Protected / potentially boot-critical" : "Application";
-    public string ModeLabel => $"Action for {Title}";
+    public string Risk => Item.Protected ? "Protégé / potentiellement critique au démarrage" : "Application";
+    public string ModeLabel => $"Action pour {Title}";
     public bool HasModes => Item.Kind is ImageItemKind.Service or ImageItemKind.Feature;
-    public string[] Modes { get; } = ["Disable", "Remove"];
+    public string[] Modes { get; } = ["Désactiver", "Supprimer"];
     public bool Selected { get => selected; set => Set(ref selected, value); }
     public int ModeIndex { get => modeIndex; set => Set(ref modeIndex, value); }
     public ExpertAction Action => new(Item.Kind, Item.Identity, ModeIndex == 0 ? ExpertActionMode.Disable : ExpertActionMode.Remove);
 }
 
-// The seven rows of the build page. Each row is fed the engine's progress events for its phase
-// (BuildProgressText.Phase) and mirrors them as grouped, counted operation rows.
+// Les 7 étapes de la page de création.
 public sealed class BuildStageBoard
 {
     public BuildStageChoice[] Stages { get; } =
     [
-        new("Prepare media", "\uE8B7"), new("Export and mount", "\uE7C5"), new("Remove components", "\uE74D"),
-        new("Commit image", "\uE74E"), new("Compress image", "\uE8B9"), new("Create ISO", "\uE958"), new("Verify output", "\uE73E")
+        new("Préparation du support", "\uE8B7"), new("Exportation et montage", "\uE7C5"), new("Suppression des composants", "\uE74D"),
+        new("Enregistrement de l'image", "\uE74E"), new("Compression de l'image", "\uE8B9"), new("Création de l'ISO", "\uE958"), new("Vérification finale", "\uE73E")
     ];
 
-    // Returns the phase the event belongs to, or -1 when it is not a displayed operation.
     public int Apply(BuildProgress progress)
     {
         var phase = BuildProgressText.Phase(progress.Stage);
@@ -68,8 +65,6 @@ public sealed class BuildStageBoard
     public void Stop(bool cancelled) { foreach (var stage in Stages) stage.Stop(cancelled); }
     public void Complete() { foreach (var stage in Stages) stage.Complete(); }
 
-    // A resumed run only plans the tail of the pipeline. Phases it never planned, ahead of its last planned
-    // stage, were finished before the saved checkpoint, so they read as done instead of staying "Waiting".
     public void MarkEarlierPhasesDone()
     {
         var last = Array.FindLastIndex(Stages, stage => stage.Operations.Count > 0);
@@ -81,15 +76,13 @@ public sealed class BuildStageChoice(string title, string glyph) : ObservableCho
 {
     private const string StagePrefix = "stage:";
     private static readonly int StateCount = Enum.GetValues<BuildOperationState>().Length;
-    private string status = "Waiting";
+    private string status = "En attente";
     private bool expanded;
     private bool halted;
     private bool doneEarlier;
     private readonly Dictionary<string, BuildOperationChoice> lookup = new(StringComparer.Ordinal);
     private readonly Dictionary<string, StageTally> tallies = new(StringComparer.Ordinal);
 
-    // One engine stage owns a "stage:" row and any number of item rows. Items are the unit of work
-    // when there are any, so one failure is never counted for the item and again for its stage.
     private sealed class StageTally
     {
         public BuildOperationState? Own;
@@ -111,7 +104,7 @@ public sealed class BuildStageChoice(string title, string glyph) : ObservableCho
         Operations.Clear();
         halted = false;
         doneEarlier = false;
-        Status = "Waiting";
+        Status = "En attente";
         Expanded = false;
     }
 
@@ -124,7 +117,6 @@ public sealed class BuildStageChoice(string title, string glyph) : ObservableCho
             operation = new(id, progress.Message, progress.Stage);
             lookup.Add(id, operation);
             doneEarlier = false;
-            // Item rows sit directly under their own stage row; stage rows keep the order they were planned in.
             Operations.Insert(isStage ? Operations.Count : InsertIndex(progress.Stage), operation);
             if (!tallies.TryGetValue(progress.Stage, out var created)) tallies.Add(progress.Stage, created = new());
             if (isStage) created.Own = BuildOperationState.Pending;
@@ -158,8 +150,6 @@ public sealed class BuildStageChoice(string title, string glyph) : ObservableCho
         return progress.State == BuildOperationState.Completed ? 1 : Math.Clamp(progress.Percent ?? 0, 0, 100) / 100;
     }
 
-    // The build ended here. Work that never started is "Not run", not "Next", and work still marked
-    // as running is closed as failed or cancelled.
     public void Stop(bool cancelled)
     {
         if (Operations.Count == 0) return;
@@ -171,13 +161,13 @@ public sealed class BuildStageChoice(string title, string glyph) : ObservableCho
         RefreshStatus();
     }
 
-    public void Complete() => Status = doneEarlier ? "Done earlier" : "Complete";
+    public void Complete() => Status = doneEarlier ? "Déjà terminé" : "Terminé";
 
     public void MarkDoneEarlier()
     {
         if (Operations.Count > 0) return;
         doneEarlier = true;
-        Status = "Done earlier";
+        Status = "Déjà terminé";
     }
 
     private int InsertIndex(string stage)
@@ -215,11 +205,11 @@ public sealed class BuildStageChoice(string title, string glyph) : ObservableCho
             if (tally.Own is BuildOperationState.Failed && tally.Items[(int)BuildOperationState.Failed] == 0) failed++;
             if (tally.Own is BuildOperationState.Cancelled && tally.Items[(int)BuildOperationState.Cancelled] == 0) cancelled++;
         }
-        var rest = pending == 0 ? "" : halted ? $" · {pending} not run" : $" · {pending} next";
-        Status = failed > 0 ? $"{(failed == 1 ? "Failed: " + ErrorText.Clip(FirstFailedTitle(), 48) : failed + " failed")} · {done} done{rest}" :
-            cancelled > 0 ? $"Cancelled · {done} done{rest}" :
-            running ? $"In progress · {done} done{rest}" :
-            pending > 0 ? (halted && done == 0 ? "Not run" : $"{done} done{rest}") : "Complete";
+        var rest = pending == 0 ? "" : halted ? $" · {pending} non exécuté(s)" : $" · {pending} à suivre";
+        Status = failed > 0 ? $"{(failed == 1 ? "Échec : " + ErrorText.Clip(FirstFailedTitle(), 48) : failed + " échecs")} · {done} terminé(s){rest}" :
+            cancelled > 0 ? $"Annulé · {done} terminé(s){rest}" :
+            running ? $"En cours · {done} terminé(s){rest}" :
+            pending > 0 ? (halted && done == 0 ? "Non exécuté" : $"{done} terminé(s){rest}") : "Terminé";
     }
 
     private string FirstFailedTitle() =>
@@ -229,7 +219,6 @@ public sealed class BuildStageChoice(string title, string glyph) : ObservableCho
 
 public sealed class BuildOperationChoice(string id, string title, string stage) : ObservableChoice
 {
-    // Rows show a short reason; the untruncated text stays in FullDetail and the job log.
     private const int DetailLimit = 360;
     private BuildOperationState state;
     private string detail = "";
@@ -252,9 +241,9 @@ public sealed class BuildOperationChoice(string id, string title, string stage) 
     }
     public string Status => State switch
     {
-        BuildOperationState.Running => "In progress", BuildOperationState.Completed => "Done",
-        BuildOperationState.Skipped => "Skipped", BuildOperationState.Failed => "Failed",
-        BuildOperationState.Cancelled => "Cancelled", _ => NotRun ? "Not run" : "Next"
+        BuildOperationState.Running => "En cours", BuildOperationState.Completed => "Terminé",
+        BuildOperationState.Skipped => "Ignoré", BuildOperationState.Failed => "Échec",
+        BuildOperationState.Cancelled => "Annulé", _ => NotRun ? "Non exécuté" : "À suivre"
     };
     public string Glyph => State switch
     {

@@ -11,13 +11,18 @@ public static class BuildProgressText
 
     public static double? Percent(string text)
     {
-        var match = Regex.Match(text, @"(\d+(?:\.\d+)?)%");
-        return match.Success && double.TryParse(match.Groups[1].Value, NumberStyles.Float, CultureInfo.InvariantCulture, out var value)
-            ? Math.Clamp(value, 0, 100) : null;
+        var match = Regex.Match(text, @"(\d+(?:[.,]\d+)?)\s*%");
+        if (match.Success)
+        {
+            var raw = match.Groups[1].Value.Replace(',', '.');
+            if (double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out var value))
+                return Math.Clamp(value, 0, 100);
+        }
+        return null;
     }
 
     public static bool IsConsoleProgress(string text) =>
-        Regex.IsMatch(text.Trim(), @"^\[[\s=]*\d+(?:\.\d+)?%[\s=]*\]$");
+        Regex.IsMatch(text.Trim(), @"^\[[\s=]*\d+(?:[.,]\d+)?\s*%[\s=]*\]$");
 
     public static string ForDisplay(string text) => string.Join(Environment.NewLine,
         text.Split(["\r\n", "\n", "\r"], StringSplitOptions.None).Where(line => !IsConsoleProgress(line)));

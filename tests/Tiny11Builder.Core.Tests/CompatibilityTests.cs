@@ -109,6 +109,36 @@ public sealed class CompatibilityTests
     }
 
     [Fact]
+    public void Unattend_generates_custom_local_account_and_autologon_when_specified()
+    {
+        var recipe = new BuildRecipe
+        {
+            PreferLocalAccount = true,
+            UnattendUsername = "TestUser",
+            UnattendPassword = "SecretPassword",
+            UnattendComputerName = "MyPC",
+            AutoLogon = true
+        };
+        var text = UnattendBuilder.Create(Image(29689, "x64"), recipe);
+        var xml = XDocument.Parse(text);
+        XNamespace ns = "urn:schemas-microsoft-com:unattend";
+
+        var userAccount = xml.Descendants(ns + "LocalAccount").Single();
+        Assert.Equal("TestUser", userAccount.Element(ns + "Name")!.Value);
+        Assert.Equal("Administrators", userAccount.Element(ns + "Group")!.Value);
+        Assert.Equal("SecretPassword", userAccount.Element(ns + "Password")!.Element(ns + "Value")!.Value);
+
+        var autoLogon = xml.Descendants(ns + "AutoLogon").Single();
+        Assert.Equal("TestUser", autoLogon.Element(ns + "Username")!.Value);
+        Assert.Equal("SecretPassword", autoLogon.Element(ns + "Password")!.Element(ns + "Value")!.Value);
+        Assert.Equal("true", autoLogon.Element(ns + "Enabled")!.Value);
+
+        Assert.Equal("MyPC", xml.Descendants(ns + "ComputerName").Single().Value);
+        Assert.Equal("true", xml.Descendants(ns + "HideLocalAccountScreen").Single().Value);
+        Assert.Equal("true", xml.Descendants(ns + "HideOnlineAccountScreens").Single().Value);
+    }
+
+    [Fact]
     public void Build_modes_have_exact_original_core_and_empty_custom_removal_sets()
     {
         Assert.Equal(3, Enum.GetValues<BuildMode>().Length);

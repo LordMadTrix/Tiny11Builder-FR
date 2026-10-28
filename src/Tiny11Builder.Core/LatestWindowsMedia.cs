@@ -33,7 +33,7 @@ public sealed class LatestWindowsMedia
         if (architecture is not ("x64" or "arm64")) throw new InvalidDataException("Only x64 and ARM64 downloads are supported.");
         var page = architecture == "arm64" ? OfficialImageDownloader.ArmDownloadPage : OfficialImageDownloader.DownloadPage;
         var transport = new OfficialTransport(progress, delay, page);
-        progress?.Report("Checking Microsoft's latest Windows 11 release.");
+        progress?.Report("Vérification de la dernière version officielle de Windows 11 chez Microsoft…");
         var html = await ReadAsync(new Uri(page.Replace("/software-download/", "/en-us/software-download/", StringComparison.Ordinal)), transport, token);
         var product = ParseProductId(html);
         var session = Guid.NewGuid().ToString();
@@ -41,14 +41,14 @@ public sealed class LatestWindowsMedia
         var response = await ReadAsync(new($"https://ov-df.microsoft.com/mdt.js?instanceId={Instance}&PageId=si&session_id={session}"), transport, token);
         var w = Regex.Match(response, @"[?&]w=([A-F0-9]+)").Groups[1].Value;
         var ticks = Regex.Match(response, "rticks=\\\"\\+?(\\d+)").Groups[1].Value;
-        if (w.Length == 0 || ticks.Length == 0) throw transport.Unavailable("Microsoft did not provide a download session. Retry later or use a local ISO.");
+        if (w.Length == 0 || ticks.Length == 0) throw transport.Unavailable("Microsoft n'a pas fourni de session de téléchargement. Réessayez ou utilisez un ISO local.");
         await ReadAsync(new($"https://ov-df.microsoft.com/?session_id={session}&CustomerId={Instance}&PageId=si&w={w}" +
             $"&mdt={DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()}&rticks={ticks}"), transport, token);
         var languageJson = await ReadAsync(Api("getskuinformationbyproductedition", product, "undefined", session), transport, token);
         using var languages = JsonDocument.Parse(languageJson);
         CheckErrors(languages.RootElement, transport);
         var sku = SelectLanguage(languages.RootElement.GetProperty("Skus"), culture, out var language);
-        progress?.Report($"Getting the latest {architecture.ToUpperInvariant()} ISO in {language}.");
+        progress?.Report($"Recherche de l'ISO {architecture.ToUpperInvariant()} en {language}…");
         using var links = JsonDocument.Parse(await ReadAsync(Api("GetProductDownloadLinksBySku", "undefined", sku, session), transport, token));
         CheckErrors(links.RootElement, transport);
         var type = architecture == "arm64" ? 2 : 1;
@@ -136,7 +136,13 @@ public sealed class LatestWindowsMedia
     private static void CheckErrors(JsonElement root, OfficialTransport transport)
     {
         if (root.TryGetProperty("Errors", out var errors) && errors.ValueKind == JsonValueKind.Array && errors.GetArrayLength() > 0)
-            throw transport.Unavailable("Microsoft refused the download request. " + WebUtility.HtmlDecode(errors[0].GetProperty("Value").GetString()) +
-                " Retry later, use a local ISO, or open Microsoft's official download page. No third-party mirror will be used.");
+        {
+            var raw = WebUtility.HtmlDecode(errors[0].GetProperty("Value").GetString()) ?? "";
+            var isSentinel = raw.Contains("Sentinel", StringComparison.OrdinalIgnoreCase);
+            var explanation = isSentinel
+                ? "Le système de sécurité Microsoft Sentinel a refusé la requête de téléchargement direct depuis l'application. Pour obtenir l'ISO officiel sans blocage, cliquez sur 'Ouvrir la page de téléchargement Microsoft' ci-dessous dans votre navigateur, puis utilisez le bouton 'Choisir un ISO'."
+                : $"Microsoft a refusé la demande de téléchargement ({raw}). Réessayez ultérieurement, utilisez un ISO local ou téléchargez-le depuis la page officielle.";
+            throw transport.Unavailable(explanation);
+        }
     }
 }

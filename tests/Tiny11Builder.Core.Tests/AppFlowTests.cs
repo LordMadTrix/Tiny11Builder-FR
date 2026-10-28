@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Runtime.Versioning;
 using Tiny11Builder.App;
 using Tiny11Builder.Core;
@@ -20,7 +20,7 @@ public sealed class AppFlowTests
         var stopped = await Assert.ThrowsAsync<BuildFailureException>(() => cancelled.Engine.BuildAsync(cancelled.Recipe, null, cancel.Token));
         var outcome = OperationOutcomes.Classify(OperationKind.Build, stopped);
         Assert.True(outcome.Cancelled);
-        Assert.Equal("Build cancelled.", outcome.Title);
+        Assert.Equal("Création annulée.", outcome.Title);
         Assert.Equal(NoticeLevel.Warning, outcome.Level);
         Assert.Equal(stopped.WorkDirectory, outcome.WorkDirectory);
         Assert.True(outcome.IsBuildRun);
@@ -30,22 +30,22 @@ public sealed class AppFlowTests
         var error = await Assert.ThrowsAsync<BuildFailureException>(() => failed.Engine.BuildAsync(failed.Recipe, null, CancellationToken.None));
         var failure = OperationOutcomes.Classify(OperationKind.Build, error, canResume: true);
         Assert.False(failure.Cancelled);
-        Assert.Equal("Build failed.", failure.Title);
+        Assert.Equal("Échec de la création.", failure.Title);
         Assert.Equal(NoticeLevel.Error, failure.Level);
         Assert.Contains("oscdimg did not produce an ISO", failure.Message);
-        Assert.Contains("Saved progress can be resumed.", failure.Message);
+        Assert.Contains("La progression enregistrée peut être reprise.", failure.Message);
         Assert.True(failure.Message.Length <= ErrorText.NoticeLimit + 80);
         Assert.Contains("   at ", failure.Details);   // the full diagnostics stay available
         Assert.Equal(error.WorkDirectory, failure.WorkDirectory);
     }
 
     [Theory]
-    [InlineData(OperationKind.Recover, "Recovery cancelled.")]
-    [InlineData(OperationKind.Download, "Download cancelled.")]
-    [InlineData(OperationKind.Inspect, "Inspection cancelled.")]
-    [InlineData(OperationKind.Inventory, "Component list cancelled.")]
-    [InlineData(OperationKind.Resume, "Resume cancelled.")]
-    [InlineData(OperationKind.Other, "Cancelled.")]
+    [InlineData(OperationKind.Recover, "Récupération annulée.")]
+    [InlineData(OperationKind.Download, "Téléchargement annulé.")]
+    [InlineData(OperationKind.Inspect, "Analyse annulée.")]
+    [InlineData(OperationKind.Inventory, "Liste des composants annulée.")]
+    [InlineData(OperationKind.Resume, "Reprise annulée.")]
+    [InlineData(OperationKind.Other, "Opération annulée.")]
     public void Only_a_build_is_ever_called_a_build_cancellation(OperationKind kind, string title)
     {
         var outcome = OperationOutcomes.Classify(kind, new OperationCanceledException());
@@ -56,11 +56,11 @@ public sealed class AppFlowTests
     }
 
     [Theory]
-    [InlineData(OperationKind.Recover, "Recovery did not complete.")]
-    [InlineData(OperationKind.Download, "The download did not complete.")]
-    [InlineData(OperationKind.Elevate, "The app could not restart as administrator.")]
-    [InlineData(OperationKind.Resume, "Resume failed.")]
-    [InlineData(OperationKind.Check, "The operation did not complete.")]
+    [InlineData(OperationKind.Recover, "La récupération n'a pas abouti.")]
+    [InlineData(OperationKind.Download, "Le téléchargement n'a pas abouti.")]
+    [InlineData(OperationKind.Elevate, "L'application n'a pas pu redémarrer en tant qu'administrateur.")]
+    [InlineData(OperationKind.Resume, "Échec de la reprise.")]
+    [InlineData(OperationKind.Check, "L'opération n'a pas abouti.")]
     public void Failures_are_named_for_what_failed(OperationKind kind, string title)
     {
         var outcome = OperationOutcomes.Classify(kind, new IOException("Disk is full."));
@@ -86,7 +86,7 @@ public sealed class AppFlowTests
         Assert.True(outcome.Cancelled);
         Assert.True(outcome.RecoveryRequired);
         Assert.Equal(NoticeLevel.Error, outcome.Level);
-        Assert.Contains("Recover workspace", outcome.Message);
+        Assert.Contains("Votre image source n'a pas été modifiée", outcome.Message);
 
         var failed = new BuildFailureException("The build failed and its mount could not be discarded. Recovery is required.", @"C:\tiny11\job",
             new AggregateException(new IOException("DISM failed"), new OperationCanceledException()), recoveryRequired: true);
@@ -120,7 +120,7 @@ public sealed class AppFlowTests
         Assert.EndsWith("…", summary);
         Assert.Equal("Done", ErrorText.Summary("[=====59.0%====]\nDone"));
         Assert.Equal("", ErrorText.Summary("  \n "));
-        Assert.Equal("No further details were reported.", ErrorText.Reason(new Exception("")));
+        Assert.Equal("Aucun détail supplémentaire n'a été signalé.", ErrorText.Reason(new Exception("")));
         Assert.Equal("ab…", ErrorText.Clip("abcdefghij", 3));
         Assert.Equal("short", ErrorText.Clip("short", 10));
     }
@@ -187,9 +187,9 @@ public sealed class AppFlowTests
 
         Assert.Contains("job.json", ResumeSupport.Inspect(Path.Combine(failure.WorkDirectory, "recipe.json"), _ => true).Problem);
         File.Delete(Path.Combine(failure.WorkDirectory, "recipe.json"));
-        Assert.Contains("recipe is missing", ResumeSupport.Inspect(job, _ => true).Problem);
+        Assert.Contains("La recette enregistrée", ResumeSupport.Inspect(job, _ => true).Problem);
         File.WriteAllText(Path.Combine(failure.WorkDirectory, "recipe.json"), "{ not json");
-        Assert.Contains("could not be read", ResumeSupport.Inspect(job, _ => true).Problem);
+        Assert.Contains("n'a pas pu être lue", ResumeSupport.Inspect(job, _ => true).Problem);
     }
 
     [Fact]
@@ -197,7 +197,7 @@ public sealed class AppFlowTests
     {
         var invalid = ResumeSupport.Inspect("C:\\tiny11\\bad\0name\\job.json", _ => true);
         Assert.Null(invalid.Recipe);
-        Assert.Equal("That is not a valid job file path.", invalid.Problem);
+        Assert.Equal("Le chemin du fichier de tâche n'est pas valide.", invalid.Problem);
     }
 
     [Fact]
@@ -209,18 +209,18 @@ public sealed class AppFlowTests
             SelectedOptions = CleanupCatalog.ForMode(BuildMode.Tiny11Core), Compression = Compression.Maximum
         };
         var text = ResumeSupport.Describe(recipe);
-        Assert.Contains(@"Output: C:\tiny11\out.iso", text);
+        Assert.Contains(@"Fichier de sortie : C:\tiny11\out.iso", text);
         Assert.Contains("Tiny11 Core", text);
-        Assert.Contains("Maximum WIM", text);
-        Assert.Contains("can't be changed", text);
-        Assert.Contains("Core: no Windows Update", text);
-        Assert.DoesNotContain("Individual removals include protected items", text);
+        Assert.Contains("Compression", text);
+        Assert.Contains("ne peuvent pas être modifiés", text);
+        Assert.Contains("Core : pas de Windows Update", text);
+        Assert.DoesNotContain("Les suppressions individuelles incluent des éléments protégés", text);
         var custom = ResumeSupport.Describe(new BuildRecipe
         {
             Mode = BuildMode.Custom, ExpertAcknowledged = true, ExpertActions = [new(ImageItemKind.Service, "Driver", ExpertActionMode.Remove)]
         });
-        Assert.Contains("Individual removals include protected items", custom);
-        Assert.DoesNotContain("Core: no Windows Update", custom);
+        Assert.Contains("Les suppressions individuelles incluent des éléments protégés", custom);
+        Assert.DoesNotContain("Core : pas de Windows Update", custom);
     }
 
     [Fact]
@@ -230,15 +230,15 @@ public sealed class AppFlowTests
         var core = new BuildRecipe { Flavor = BuildFlavor.Core, CoreAcknowledged = true };
         var payload = new BuildRecipe { ExpertActions = [new(ImageItemKind.ComponentPayload, "Windows.Cache", ExpertActionMode.Remove)] };
         Assert.Null(SetupLabels.Legacy(plain));
-        Assert.Equal("Legacy installer: automatic (needed for Core removals)", SetupLabels.Legacy(core));
-        Assert.Equal("Legacy installer: automatic (needed for component-payload removals)", SetupLabels.Legacy(payload));
-        Assert.Equal("Legacy installer: automatic (needed for Core and component-payload removals)",
+        Assert.Equal("Installeur hérité : automatique (requis pour Suppressions Core)", SetupLabels.Legacy(core));
+        Assert.Equal("Installeur hérité : automatique (requis pour suppressions directes de composants)", SetupLabels.Legacy(payload));
+        Assert.Equal("Installeur hérité : automatique (requis pour Core et suppressions directes de composants)",
             SetupLabels.Legacy(core with { ExpertActions = payload.ExpertActions }));
         Assert.Null(SetupLabels.Legacy(new BuildRecipe { ExpertActions = [new(ImageItemKind.Service, "Driver", ExpertActionMode.Disable)] }));
         // The label only follows Core's own rule, so it cannot disagree with what the engine does.
         foreach (var recipe in new[] { plain, core, payload })
             Assert.Equal(SetupInstaller.RequiresLegacy(recipe), SetupLabels.Legacy(recipe) is not null);
-        Assert.Contains("Legacy installer: automatic (needed for Core removals).", ResumeSupport.Describe(core));
+        Assert.Contains("Installeur hérité : automatique (requis pour Suppressions Core).", ResumeSupport.Describe(core));
         Assert.DoesNotContain("Legacy installer", ResumeSupport.Describe(plain));
     }
 
@@ -271,9 +271,9 @@ public sealed class AppFlowTests
         var flow = Begin(run);
         var asking = flow.View;
         Assert.Equal(CancelStage.Confirming, asking.Stage);
-        Assert.Equal("Cancel this build?", asking.Title);
-        Assert.Equal("Cancel build", asking.ConfirmText);   // the critical action ...
-        Assert.Equal("Keep building", asking.CloseText);   // ... and the safe answer
+        Assert.Equal("Annuler cette création ?", asking.Title);
+        Assert.Equal("Annuler la création", asking.ConfirmText);   // the critical action ...
+        Assert.Equal("Poursuivre la création", asking.CloseText);   // ... and the safe answer
         Assert.True(asking.CanClose);
         Assert.False(asking.ShowProgress);
         flow.Observe(new("Compress", "Compress the final image", 12, "stage:Compress"));
@@ -284,9 +284,9 @@ public sealed class AppFlowTests
         Assert.True(run.Token.IsCancellationRequested);
         var stopping = flow.View;
         Assert.Equal(CancelStage.Cancelling, stopping.Stage);
-        Assert.Equal("Cancelling the build", stopping.Title);
-        Assert.Equal("Waiting for the current operation to finish", stopping.Status);
-        Assert.Equal("Current operation: Compress the final image · 12%", stopping.Detail);   // seen while it was still asking
+        Assert.Equal("Annulation de la création en cours", stopping.Title);
+        Assert.Equal("Attente de la fin de l'opération en cours", stopping.Status);
+        Assert.Equal("Opération en cours : Compress the final image · 12%", stopping.Detail);   // seen while it was still asking
         Assert.True(stopping.ShowProgress);
         Assert.True(stopping.Indeterminate);   // a wait, not a percentage of the shutdown
         Assert.Null(stopping.ConfirmText);
@@ -338,10 +338,10 @@ public sealed class AppFlowTests
         flow.RunSettled();
         var view = flow.View;
         Assert.Equal(CancelStage.Ended, view.Stage);
-        Assert.Equal("The build already finished", view.Title);
-        Assert.Contains("finished before it could be cancelled", view.Body);
+        Assert.Equal("L'opération de création s'est déjà terminée", view.Title);
+        Assert.Contains("L'ISO et le rapport de création ont été enregistrés", view.Body);
         Assert.Null(view.ConfirmText);   // nothing is left to cancel
-        Assert.Equal("Done", view.CloseText);
+        Assert.Equal("Terminé", view.CloseText);
         Assert.True(view.ShowProgress);
         Assert.False(view.Indeterminate);
         Assert.Equal(100, view.Percent);
@@ -363,7 +363,7 @@ public sealed class AppFlowTests
         run.Settle();   // the prompt has not been told yet
         Assert.False(flow.Confirm());
         Assert.Equal(CancelStage.Ended, flow.Stage);
-        Assert.Equal("The download already finished", flow.View.Title);
+        Assert.Equal("L'opération de téléchargement s'est déjà terminée", flow.View.Title);
         Assert.False(run.Token.IsCancellationRequested);
     }
 
@@ -375,8 +375,8 @@ public sealed class AppFlowTests
         run.Settle();
         var flow = Begin(run);
         Assert.Equal(CancelStage.Ended, flow.Stage);
-        Assert.Equal("The inspection already finished", flow.View.Title);
-        Assert.Equal("The image was inspected. It finished before it could be cancelled, so nothing was cancelled.", flow.View.Body);
+        Assert.Equal("L'opération de analyse s'est déjà terminée", flow.View.Title);
+        Assert.Equal("L'image a été analysée. Elle s'est terminée avant que l'annulation ne soit prise en compte.", flow.View.Body);
     }
 
     [Fact]
@@ -389,12 +389,12 @@ public sealed class AppFlowTests
         run.Settle();
         flow.RunSettled();
         var view = flow.View;
-        Assert.Equal("Finished before it could be cancelled", view.Title);
-        Assert.Contains("arrived too late", view.Body);
-        Assert.Equal("Finished.", view.Status);
+        Assert.Equal("Terminé avant de pouvoir être annulé", view.Title);
+        Assert.Contains("L'ISO et le rapport de création ont été enregistrés", view.Body);
+        Assert.Equal("Terminé.", view.Status);
         Assert.Equal(CancelTone.Done, view.Tone);
         Assert.Equal(100, view.Percent);
-        Assert.Equal("Done", view.CloseText);
+        Assert.Equal("Terminé", view.CloseText);
         Assert.True(flow.CanClose);
     }
 
@@ -414,7 +414,7 @@ public sealed class AppFlowTests
         Assert.Equal(CancelTone.Warning, view.Tone);
         Assert.Equal("The ISO was saved, but some follow-up steps reported problems. A second problem.", view.Warning);
         Assert.True(view.ShowProgress);   // it did finish
-        Assert.Equal("Done", view.CloseText);
+        Assert.Equal("Terminé", view.CloseText);
     }
 
     [Fact]
@@ -425,14 +425,14 @@ public sealed class AppFlowTests
         var flow = Begin(run);
         Assert.True(flow.Confirm());   // it was sent ...
         Assert.True(run.Token.IsCancellationRequested);   // ... and the token is cancelled whatever a callback does
-        Assert.Contains("The cancel was sent, but a step that reacts to it failed: The progress hook broke.", run.Warning);
+        Assert.Contains("La demande d'annulation a été envoyée, mais une étape réagissant à l'annulation a échoué : The progress hook broke.", run.Warning);
         Assert.Equal(run.Warning, flow.View.Warning);   // shown while the stop is still running
 
         run.Record(Classified(OperationKind.Build, CleanCancellation()));
         run.Settle();
         flow.RunSettled();
         var view = flow.View;
-        Assert.Equal("Build cancelled", view.Title);
+        Assert.Equal("Création annulée", view.Title);
         Assert.Equal(CancelTone.Warning, view.Tone);   // the cancellation finished, with a problem beside it
         Assert.Contains("The progress hook broke.", view.Warning);
         Assert.True(view.ShowProgress);
@@ -445,9 +445,9 @@ public sealed class AppFlowTests
         run.Record(OperationEnd.Succeeded(OperationKind.Build));
         run.Settle();   // must neither throw nor leave the run unsettled
         Assert.True(run.Settled.IsCompletedSuccessfully);
-        Assert.Contains("The cancel token could not be released: The handle is busy.", run.Warning);
+        Assert.Contains("Le jeton d'annulation n'a pas pu être libéré : The handle is busy.", run.Warning);
         Assert.Equal(RunResult.Succeeded, run.End!.Result);   // the outcome is unchanged ...
-        Assert.Contains("could not be released", run.End.Warning);   // ... and the problem travels with it
+        Assert.Contains("n'a pas pu être libéré", run.End.Warning);   // ... and the problem travels with it
         var view = Begin(run).View;
         Assert.Equal(CancelTone.Warning, view.Tone);
         Assert.Contains("The handle is busy.", view.Warning);
@@ -482,14 +482,14 @@ public sealed class AppFlowTests
     public void A_clean_cancellation_ends_with_a_completed_bar_and_a_Done_button()
     {
         var view = Ended(Classified(OperationKind.Build, CleanCancellation(), canResume: true));
-        Assert.Equal("Build cancelled", view.Title);
-        Assert.Contains("Saved progress can be resumed.", view.Body);
-        Assert.Equal("Cleanup finished.", view.Status);
+        Assert.Equal("Création annulée", view.Title);
+        Assert.Contains("La progression enregistrée peut être reprise.", view.Body);
+        Assert.Equal("Nettoyage terminé.", view.Status);
         Assert.True(view.ShowProgress);
         Assert.False(view.Indeterminate);
         Assert.Equal(100, view.Percent);
         Assert.Equal(CancelTone.Done, view.Tone);
-        Assert.Equal("Done", view.CloseText);
+        Assert.Equal("Terminé", view.CloseText);
         Assert.Equal(CancelLink.None, view.Link);
         Assert.Equal("", view.Warning);
     }
@@ -501,14 +501,14 @@ public sealed class AppFlowTests
             new AggregateException(new OperationCanceledException(), new IOException("discard failed")), recoveryRequired: true);
         var view = Ended(Classified(OperationKind.Build, failure));
         Assert.Equal(CancelTone.Error, view.Tone);
-        Assert.Equal("Build cancelled, but recovery is needed", view.Title);   // still a cancellation, not a failure
-        Assert.Contains("Recover workspace", view.Body);
+        Assert.Equal("Création annulée, mais une récupération est requise", view.Title);   // still a cancellation, not a failure
+        Assert.Contains("Nettoyer l'espace de travail", view.Body);
         Assert.False(view.ShowProgress);   // no completed bar
         Assert.Equal(0, view.Percent);
         Assert.Equal("", view.Status);   // nothing says it closed cleanly
-        Assert.Equal("Close", view.CloseText);
+        Assert.Equal("Fermer", view.CloseText);
         Assert.Equal(CancelLink.OpenLogs, view.Link);
-        Assert.Equal("Open logs", view.LinkText);
+        Assert.Equal("Ouvrir les journaux", view.LinkText);
         Assert.Contains(@"C:\tiny11\job", view.Footnote);
         Assert.DoesNotContain("safe", view.Title + view.Body + view.Status, StringComparison.OrdinalIgnoreCase);
         Assert.True(view.CanClose);   // the user can always leave a finished dialog
@@ -523,8 +523,8 @@ public sealed class AppFlowTests
         var failed = Classified(OperationKind.Build, Failure(new IOException("DISM failed")));
         Assert.Equal((RunResult.Cancelled, true), (cancelled.Result, cancelled.RecoveryRequired));
         Assert.Equal((RunResult.Failed, true), (failed.Result, failed.RecoveryRequired));
-        Assert.Equal("Build cancelled, but recovery is needed", Ended(cancelled).Title);
-        Assert.Equal("Build failed, and recovery is needed", Ended(failed).Title);
+        Assert.Equal("Création annulée, mais une récupération est requise", Ended(cancelled).Title);
+        Assert.Equal("Échec de la création, et une récupération est requise", Ended(failed).Title);
         Assert.All(new[] { cancelled, failed }, end => Assert.True(end.NeedsAttention));
     }
 
@@ -533,12 +533,12 @@ public sealed class AppFlowTests
     {
         var view = Ended(Classified(OperationKind.Build, new IOException("Disk is full.")));
         Assert.Equal(CancelTone.Error, view.Tone);
-        Assert.Equal("Build failed", view.Title);
+        Assert.Equal("Échec de la création", view.Title);
         Assert.Contains("Disk is full.", view.Body);
         Assert.False(view.ShowProgress);
         Assert.Equal(CancelLink.CopyDetails, view.Link);   // there is no job folder to open
-        Assert.Equal("Copy details", view.LinkText);
-        Assert.Equal("Close", view.CloseText);
+        Assert.Equal("Copier les détails", view.LinkText);
+        Assert.Equal("Fermer", view.CloseText);
     }
 
     [Fact]
@@ -554,7 +554,7 @@ public sealed class AppFlowTests
         Assert.Equal(outcome.Message + " " + outcome.Warning, outcome.FullMessage);
 
         var view = Ended(OperationEnd.From(outcome));
-        Assert.Equal("Build cancelled", view.Title);
+        Assert.Equal("Création annulée", view.Title);
         Assert.Equal(CancelTone.Warning, view.Tone);
         Assert.Contains("The log is locked.", view.Warning);
         Assert.Equal(CancelLink.OpenLogs, view.Link);
@@ -564,7 +564,7 @@ public sealed class AppFlowTests
             new AggregateException(new IOException("DISM failed."), new IOException("The log is locked."))));
         Assert.False(failed.Cancelled);
         Assert.Contains("DISM failed.", failed.Message);
-        Assert.StartsWith("Some cleanup steps reported problems: The log is locked.", failed.Warning);
+        Assert.StartsWith("Certaines étapes de nettoyage ont signalé des anomalies", failed.Warning);
         Assert.Equal("", OperationOutcomes.Classify(OperationKind.Build, CleanCancellation()).Warning);
     }
 
@@ -619,7 +619,7 @@ public sealed class AppFlowTests
             new("Compress", "Compress the final image", percent, "stage:Compress", state);
         flow.Observe(Event(null, BuildOperationState.Running));
         flow.Observe(Event(42.7));
-        Assert.Equal("Current operation: Compress the final image · 42%", flow.View.Detail);
+        Assert.Equal("Opération en cours : Compress the final image · 42%", flow.View.Detail);
         Assert.True(flow.View.Indeterminate);   // the bar is a wait; the percentage is only text
         Assert.Equal(0, flow.View.Percent);
         flow.Observe(Event(-5));
@@ -628,14 +628,14 @@ public sealed class AppFlowTests
         flow.Observe(Event(double.PositiveInfinity));
         Assert.EndsWith("· 0%", flow.View.Detail);   // not percentages: ignored
         flow.Observe(Event(250));   // clamped to 100, which means that operation is done
-        Assert.Equal("Finishing the current operation", flow.View.Status);
-        Assert.Equal("Current operation: Compress the final image", flow.View.Detail);
+        Assert.Equal("Finalisation de l'opération en cours", flow.View.Status);
+        Assert.Equal("Opération en cours : Compress the final image", flow.View.Detail);
         flow.Observe(Event(30));   // a later percentage (the discard of a mount, say) belongs to something with no name here
-        Assert.Equal("Finishing the current operation", flow.View.Status);
+        Assert.Equal("Finalisation de l'opération en cours", flow.View.Status);
         Assert.DoesNotContain("%", flow.View.Detail);
         flow.Observe(new("Create ISO", "Create bootable ISO", null, "stage:Create ISO", BuildOperationState.Running));
-        Assert.Equal("Waiting for the current operation to finish", flow.View.Status);   // a new operation starts the wait again
-        Assert.Equal("Current operation: Create bootable ISO", flow.View.Detail);
+        Assert.Equal("Attente de la fin de l'opération en cours", flow.View.Status);   // a new operation starts the wait again
+        Assert.Equal("Opération en cours : Create bootable ISO", flow.View.Detail);
         flow.Observe(new("Create ISO", "A console line", 10));   // no operation id: not an operation's progress
         Assert.DoesNotContain("%", flow.View.Detail);
     }
@@ -664,20 +664,20 @@ public sealed class AppFlowTests
         var flow = Begin(run);
         flow.Observe(Mount());
         flow.Confirm();
-        Assert.Equal("Waiting for the current operation to finish", flow.View.Status);   // before the cancel was sent: ignored
+        Assert.Equal("Attente de la fin de l'opération en cours", flow.View.Status);   // before the cancel was sent: ignored
         flow.Observe(Mount());
-        Assert.Equal("Discarding the working mount", flow.View.Status);
+        Assert.Equal("Libération et nettoyage du montage de travail", flow.View.Status);
         flow.Observe(Logs());
-        Assert.Equal("Saving logs", flow.View.Status);
+        Assert.Equal("Enregistrement des journaux", flow.View.Status);
         flow.Observe(Mount());
-        Assert.Equal("Saving logs", flow.View.Status);   // never back
+        Assert.Equal("Enregistrement des journaux", flow.View.Status);   // never back
         Assert.Equal("", flow.View.Detail);   // the operation that was running is long over
 
         // With nothing mounted Core sends only the second event, and the wait jumps straight to it.
         var unmounted = Begin(new OperationRun(OperationKind.Build));
         unmounted.Confirm();
         unmounted.Observe(Logs());
-        Assert.Equal("Saving logs", unmounted.View.Status);
+        Assert.Equal("Enregistrement des journaux", unmounted.View.Status);
     }
 
     [Fact]
@@ -685,22 +685,22 @@ public sealed class AppFlowTests
     {
         var run = new OperationRun(OperationKind.Download);
         var flow = Begin(run);
-        Assert.Equal("Cancel this download?", flow.View.Title);
-        Assert.Contains("partial file is kept", flow.View.Body);
-        Assert.Equal("Keep downloading", flow.View.CloseText);
+        Assert.Equal("Annuler ce téléchargement ?", flow.View.Title);
+        Assert.Contains("partiel", flow.View.Body);
+        Assert.Equal("Poursuivre le téléchargement", flow.View.CloseText);
         flow.Confirm();
-        Assert.Equal("Cancelling the download", flow.View.Title);
-        Assert.Equal("Stopping the download", flow.View.Status);
-        Assert.Equal("Do not close the app until this finishes.", flow.View.Footnote);
+        Assert.Equal("Annulation du téléchargement", flow.View.Title);
+        Assert.Equal("Arrêt du téléchargement", flow.View.Status);
+        Assert.Equal("Ne fermez pas l'application avant la fin de l'opération.", flow.View.Footnote);
         flow.Observe(new(CancelCleanup.Stage, "Discarding the working mount", OperationId: CancelCleanup.MountOperation, State: BuildOperationState.Running));
-        Assert.Equal("Stopping the download", flow.View.Status);   // a download has no mount to discard
+        Assert.Equal("Arrêt du téléchargement", flow.View.Status);   // a download has no mount to discard
 
         run.Record(Classified(OperationKind.Download, new OperationCanceledException()));
         run.Settle();
         flow.RunSettled();
         var view = flow.View;
-        Assert.Equal("Download cancelled", view.Title);
-        Assert.Equal("Stopped.", view.Status);
+        Assert.Equal("Téléchargement annulé", view.Title);
+        Assert.Equal("Arrêté.", view.Status);
         var text = view.Title + view.Body + view.Status + view.Footnote;
         Assert.DoesNotContain("build", text, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("mount", text, StringComparison.OrdinalIgnoreCase);
@@ -724,8 +724,8 @@ public sealed class AppFlowTests
     [Fact]
     public void The_shell_button_keeps_the_caption_the_user_asked_for_and_no_prompt_says_the_working_copy_is_discarded()
     {
-        Assert.Equal("Cancel safely", CancelPrompts.ButtonLabel);
-        Assert.Contains("The mounted copy is safely unmounted; working files, saved progress and logs are kept.",
+        Assert.Equal("Annuler en toute sécurité", CancelPrompts.ButtonLabel);
+        Assert.Contains("La création s'arrête au prochain point sûr.",
             CancelPrompts.For(OperationKind.Build).Explanation);
         foreach (var kind in Enum.GetValues<OperationKind>())
         {
@@ -745,7 +745,7 @@ public sealed class AppFlowTests
             copy.Stopping, copy.Waiting, copy.Finished };
         Assert.All(all, text => Assert.False(string.IsNullOrWhiteSpace(text)));
         Assert.EndsWith("?", copy.Question);
-        Assert.StartsWith("Cancel", copy.Confirm);
+        Assert.StartsWith("Annuler", copy.Confirm);
         Assert.NotEqual(copy.Confirm, copy.Keep);
         Assert.Equal(kind is OperationKind.Build or OperationKind.Resume or OperationKind.Inventory, copy.CleansUp);
         if (kind is not (OperationKind.Build or OperationKind.Resume))

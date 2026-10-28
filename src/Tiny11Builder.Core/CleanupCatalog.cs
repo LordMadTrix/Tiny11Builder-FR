@@ -4,76 +4,76 @@ public static class CleanupCatalog
 {
     public static IReadOnlyList<CleanupOption> Options { get; } =
     [
-        App("copilot-app", "Copilot apps", "Remove preinstalled Copilot apps. Keep shared runtimes and shell components.", true, true,
-            "Microsoft.Copilot", "Microsoft.Windows.Copilot", "Microsoft.549981C3F5F10"),
-        App("outlook", "New Outlook and Mail", "Remove Outlook and the retired Mail / Calendar apps.", true, true,
+        App("copilot-app", "Applications Copilot", "Supprime les applications Copilot préinstallées (Windows 11 23H2 / 24H2). Conserve les composants partagés et le shell.", true, true,
+            "Microsoft.Copilot", "Microsoft.Windows.Copilot", "Microsoft.Windows.Ai.Copilot.Provider", "Microsoft.549981C3F5F10"),
+        App("outlook", "Nouvel Outlook et Courrier", "Supprime Outlook ainsi que les anciennes applications Courrier et Calendrier.", true, true,
             "Microsoft.OutlookForWindows", "microsoft.windowscommunicationsapps"),
-        App("teams", "Teams", "Remove personal Teams clients.", true, true, "MSTeams", "MicrosoftTeams", "Microsoft.Windows.Teams"),
-        App("xbox", "Xbox and gaming overlays", "Remove Xbox apps and Game Bar. Gaming sign-in and recording may be unavailable.", true, true,
+        App("teams", "Microsoft Teams", "Supprime les clients Teams personnels.", true, true, "MSTeams", "MicrosoftTeams", "Microsoft.Windows.Teams"),
+        App("xbox", "Xbox et barre de jeu", "Supprime les applications Xbox et la barre de jeu. La connexion Xbox et l'enregistrement peuvent être indisponibles.", true, true,
             "Microsoft.GamingApp", "Microsoft.XboxApp", "Microsoft.Xbox.TCUI", "Microsoft.XboxGameOverlay",
             "Microsoft.XboxGamingOverlay", "Microsoft.XboxIdentityProvider", "Microsoft.XboxSpeechToTextOverlay"),
-        App("news-weather", "News, weather and Bing apps", "Remove packaged feed apps; local Windows Search is preserved.", true, true,
-            "Microsoft.BingNews", "Microsoft.BingWeather", "Microsoft.BingSearch"),
-        App("office-promos", "Microsoft 365 promotions", "Remove Office Hub and Office push-notification promotional apps.", true, true,
+        App("news-weather", "Actualités, Météo et Bing", "Supprime les flux d'actualités Bing et l'application d'accueil Widgets StartExperiences.", true, true,
+            "Microsoft.BingNews", "Microsoft.BingWeather", "Microsoft.BingSearch", "Microsoft.StartExperiencesApp"),
+        App("office-promos", "Promotions Microsoft 365", "Supprime le Hub Office et les notifications promotionnelles Office.", true, true,
             "Microsoft.MicrosoftOfficeHub", "Microsoft.OfficePushNotificationUtility"),
-        App("clipchamp", "Clipchamp", "Remove the bundled video editor.", true, true, "Clipchamp.Clipchamp"),
-        App("solitaire", "Solitaire", "Remove bundled games.", true, true, "Microsoft.MicrosoftSolitaireCollection"),
-        App("phone", "Phone Link and cross-device apps", "Remove phone integration apps. Cross-device features may stop working.", true, true,
+        App("clipchamp", "Clipchamp", "Supprime l'éditeur vidéo préinstallé Clipchamp.", true, true, "Clipchamp.Clipchamp"),
+        App("solitaire", "Collection Solitaire", "Supprime les jeux préinstallés Microsoft Solitaire.", true, true, "Microsoft.MicrosoftSolitaireCollection"),
+        App("phone", "Mobile connecté et multi-appareils", "Supprime les applications de synchronisation téléphonique. Les fonctions multi-appareils peuvent cesser de fonctionner.", true, true,
             "Microsoft.YourPhone", "Microsoft.Windows.CrossDevice"),
-        App("feedback", "Feedback, tips and help", "Remove Feedback Hub, Get Help, and introductory apps.", true, true,
+        App("feedback", "Commentaires, Astuces et Aide", "Supprime le Hub de commentaires, Obtenir de l'aide et les applications de découverte.", true, true,
             "Microsoft.WindowsFeedbackHub", "Microsoft.GetHelp", "Microsoft.Getstarted"),
-        App("devhome", "Dev Home and Power Automate", "Remove Dev Home and Power Automate Desktop.", true, true,
-            "Microsoft.Windows.DevHome", "Microsoft.PowerAutomateDesktop"),
-        App("social", "People, To Do, Family and Skype", "Remove optional organizer and communication apps.", true, true,
+        App("devhome", "Dev Home et Power Automate", "Supprime Dev Home et Power Automate Desktop.", true, true,
+            "Microsoft.Windows.DevHome", "Microsoft.Windows.DevHomeGitHubExtension", "Microsoft.Windows.DevHomeAzureExtension", "Microsoft.PowerAutomateDesktop"),
+        App("social", "Contacts, To Do, Famille et Skype", "Supprime les applications facultatives d'organisation et de communication.", true, true,
             "Microsoft.People", "Microsoft.Todos", "Microsoft.SkypeApp", "MicrosoftCorporationII.MicrosoftFamily"),
-        App("maps", "Maps and Mixed Reality", "Remove retired Maps and Mixed Reality clients.", true, true,
+        App("maps", "Cartes et Réalité mixte", "Supprime Cartes et Portail de réalité mixte (Réalité mixte déjà retirée nativement sur 24H2+).", true, true,
             "Microsoft.WindowsMaps", "Microsoft.MixedReality.Portal"),
-        App("media", "Media Player and Movies", "Remove bundled media playback apps; codecs and shared frameworks remain.", false, true,
+        App("media", "Lecteur multimédia et Films & TV", "Supprime les lecteurs multimédias préinstallés ; les codecs et bibliothèques partagées sont conservés.", false, true,
             "Microsoft.ZuneMusic", "Microsoft.ZuneVideo"),
-        App("utilities", "Clock, Recorder and Sticky Notes", "Remove optional personal utilities.", false, true,
+        App("utilities", "Horloge, Enregistreur vocal et Pense-bêtes", "Supprime les utilitaires personnels facultatifs.", false, true,
             "Microsoft.WindowsAlarms", "Microsoft.WindowsSoundRecorder", "Microsoft.MicrosoftStickyNotes"),
-        App("quickassist", "Quick Assist", "Remove Microsoft's remote-assistance client.", false, true, "MicrosoftCorporationII.QuickAssist"),
-        App("paint", "Paint, 3D Viewer and OneNote", "Remove Paint, 3D Viewer and OneNote. Leave unchecked to keep them.", false, false,
+        App("quickassist", "Assistance rapide", "Supprime l'utilitaire d'assistance à distance Microsoft.", false, true, "MicrosoftCorporationII.QuickAssist"),
+        App("paint", "Paint, Visionneuse 3D et OneNote", "Supprime Paint, Visionneuse 3D et OneNote. Décochez pour les conserver.", false, false,
             "Microsoft.Paint", "Microsoft.MSPaint", "Microsoft.Microsoft3DViewer", "Microsoft.Office.OneNote"),
-        App("camera", "Camera", "Remove the Camera app, not camera drivers.", false, false, "Microsoft.WindowsCamera"),
-        App("terminal", "Windows Terminal", "Remove Terminal. PowerShell and Command Prompt remain.", false, false, "Microsoft.WindowsTerminal"),
-        App("oem", "OEM promotional apps", "Remove Intel management status and Dolby promotional applications, not drivers.", false, false,
+        App("camera", "Caméra", "Supprime l'application Caméra (les pilotes de caméra sont conservés).", false, false, "Microsoft.WindowsCamera"),
+        App("terminal", "Windows Terminal", "Supprime Terminal. PowerShell et l'Invite de commandes restent disponibles.", false, false, "Microsoft.WindowsTerminal"),
+        App("oem", "Applications promotionnelles OEM", "Supprime les applications promotionnelles Intel et Dolby (présentes uniquement sur images constructeurs).", false, false,
             "AppUp.IntelManagementandSecurityStatus", "DolbyLaboratories.DolbyAccess", "DolbyLaboratories.DolbyDigitalPlusDecoderOEM"),
-        new("edge-files", "Remove Edge and WebView2", "Delete Edge and WebView2 files. Apps that require WebView2 may stop working. Updates may reinstall Edge.",
-            "Advanced / original builder", OptionKind.File, false, false, []),
-        new("onedrive-files", "Remove OneDrive setup binaries", "Remove both architecture-specific OneDrive installers from the offline image.",
-            "Advanced / original builder", OptionKind.File, false, false, []),
-        new("language-extras", "Speech, OCR and handwriting payloads", "Remove optional language capabilities in every image language; retain basic language support.",
-            "Optional features", OptionKind.Capability, false, false,
+        new("edge-files", "Supprimer Edge et WebView2", "Supprime les fichiers Edge et WebView2. Les apps dépendant de WebView2 peuvent ne plus fonctionner. Les mises à jour peuvent réinstaller Edge.",
+            "Avancé / Outil d'origine", OptionKind.File, false, false, []),
+        new("onedrive-files", "Supprimer les fichiers d'installation OneDrive", "Supprime les installeurs OneDrive 32 et 64 bits de l'image hors-ligne.",
+            "Avancé / Outil d'origine", OptionKind.File, false, false, []),
+        new("language-extras", "Reconnaissance vocale, OCR et écriture manuscrite", "Supprime les composants linguistiques facultatifs dans chaque langue ; conserve le support linguistique de base.",
+            "Fonctionnalités facultatives", OptionKind.Capability, false, false,
             ["Language.Handwriting", "Language.OCR", "Language.Speech", "Language.TextToSpeech"]),
-        new("legacy-capabilities", "Retired accessories and wallpaper payloads", "Remove WordPad, Steps Recorder, Math Recognizer, legacy Media Player and extended wallpapers where installed.",
-            "Optional features", OptionKind.Capability, false, true,
+        new("legacy-capabilities", "Accessoires hérités et fonds d'écran étendus", "Supprime WordPad, Enregistreur d'actions, Math Recognizer, Lecteur Windows Media classique et fonds d'écran étendus.",
+            "Fonctionnalités facultatives", OptionKind.Capability, false, true,
             ["Microsoft.Windows.WordPad", "App.StepsRecorder", "MathRecognizer", "Media.WindowsMediaPlayer", "Microsoft.Windows.Wallpaper.Extended"]),
-        Feature("xps", "XPS printing", "Disable optional XPS printing and remove its payload.", false, true, "Printing-XPSServices-Features"),
-        Feature("workfolders", "Work Folders", "Disable enterprise Work Folders sync and remove its payload.", false, true, "WorkFolders-Client"),
-        Feature("legacy", "Legacy Internet Explorer", "Disable the retired Internet Explorer optional feature where present.", true, true,
+        Feature("xps", "Impression XPS", "Désactive l'impression XPS facultative et supprime ses fichiers.", false, true, "Printing-XPSServices-Features"),
+        Feature("workfolders", "Dossiers de travail (Work Folders)", "Désactive la synchronisation Work Folders d'entreprise et supprime ses fichiers.", false, true, "WorkFolders-Client"),
+        Feature("legacy", "Internet Explorer hérité", "Désactive la fonctionnalité optionnelle Internet Explorer (retirée nativement sur Windows 11 24H2+).", true, true,
             "Internet-Explorer-Optional-amd64", "Internet-Explorer-Optional-arm64"),
-        Feature("recall-feature", "Recall optional feature", "Disable and remove Recall's payload only if this image exposes it to DISM.", true, true, "Recall"),
-        Policy("ads", "Ads, recommendations and sponsored apps", "Suppress consumer content, Settings suggestions, Explorer promotions and welcome tips.", true, true),
-        Policy("privacy", "Optional diagnostics and personalization", "Keep required diagnostic data. Disable advertising ID, personalized suggestions and input collection.", true, true),
-        Policy("copilot", "Disable Copilot and Recall", "Apply policies to disable Copilot and Recall. Support varies by build and edition.", true, true),
-        Policy("widgets", "Widgets and taskbar feeds", "Disable Widgets by policy and hide its taskbar entry.", true, true),
-        Policy("search", "Web search and search highlights", "Turn off web suggestions, cloud search and dynamic search highlights; keep local search.", true, true),
-        Policy("onedrive", "OneDrive sync and backup prompts", "Disable OneDrive sync by policy. OneDrive binaries are retained; use this only if you do not need sync.", true, true),
-        Policy("edge", "Edge first-run and promotional UI", "Suppress first-run, sidebar and recommendations. Preserve Edge and WebView2 for app compatibility.", true, true),
-        Policy("oobe", "Setup privacy and finish-setting-up nags", "Suppress privacy setup and post-sign-in setup suggestions without creating accounts or accepting the EULA.", true, true),
-        Policy("cleanup", "Component cleanup", "Regular mode preserves servicing. Core additionally resets the update base before its irreversible component pruning.", true, true),
-        Policy("hardware-bypass", "Bypass setup hardware requirements", "Set CPU, RAM, TPM, storage and Secure Boot bypass values in setup and Windows. Unsupported hardware may not work.", false, false),
-        Policy("reserved-storage", "Disable reserved storage", "Stop reserving disk space for updates. This can leave less space available during servicing.", false, false),
-        Policy("device-encryption", "Disable automatic device encryption", "Prevent automatic BitLocker device encryption; do not use if you require encryption by default.", false, false)
+        Feature("recall-feature", "Fonctionnalité Recall (IA)", "Désactive et supprime la charge utile de Recall si l'image l'expose à DISM.", true, true, "Recall", "Microsoft.Windows.Recall"),
+        Policy("ads", "Publicités, recommandations et applications sponsorisées", "Désactive le contenu commercial, les suggestions des Paramètres et les promotions de l'Explorateur.", true, true),
+        Policy("privacy", "Diagnostics optionnels et personnalisation", "Conserve les diagnostics minimaux. Désactive l'identifiant de pub, les suggestions personnalisées et la télémétrie de saisie.", true, true),
+        Policy("copilot", "Désactiver Copilot et Recall", "Applique les stratégies pour désactiver Copilot et Recall.", true, true),
+        Policy("widgets", "Widgets et flux de la barre des tâches", "Désactive les Widgets par stratégie de groupe et masque leur icône.", true, true),
+        Policy("search", "Recherche web et suggestions Bing", "Désactive les suggestions web, la recherche cloud et les contenus dynamiques ; conserve la recherche locale.", true, true),
+        Policy("onedrive", "Synchronisation et invites OneDrive", "Désactive la synchronisation OneDrive par stratégie. Les exécutables sont conservés si non supprimés.", true, true),
+        Policy("edge", "Écrans d'accueil et bannières promotionnelles Edge", "Désactive le premier lancement, la barre latérale et les recommandations Edge tout en préservant WebView2.", true, true),
+        Policy("oobe", "Écrans de confidentialité et suggestions OOBE", "Supprime les étapes invasives de fin de configuration post-installation sans accepter le CLUF à votre place.", true, true),
+        Policy("cleanup", "Nettoyage des composants de l'image", "Le mode standard préserve la maintenance. Le mode Core réinitialise la base de composants avant l'élagage.", true, true),
+        Policy("hardware-bypass", "Contourner les prérequis matériels (TPM, CPU, RAM)", "Injecte les clés de contournement CPU, RAM, TPM, stockage et Secure Boot dans l'installeur et Windows.", false, false),
+        Policy("reserved-storage", "Désactiver le stockage réservé", "Désactive la réservation d'espace disque pour les mises à jour.", false, false),
+        Policy("device-encryption", "Désactiver le chiffrement automatique BitLocker", "Empêche l'activation automatique du chiffrement de disque BitLocker sur les périphériques compatibles.", false, false)
     ];
 
     private static CleanupOption App(string id, string title, string description, bool balanced, bool minimal, params string[] targets)
-        => new(id, title, description, "Bundled apps", OptionKind.App, balanced, minimal, targets);
+        => new(id, title, description, "Applications intégrées", OptionKind.App, balanced, minimal, targets);
     private static CleanupOption Feature(string id, string title, string description, bool balanced, bool minimal, params string[] targets)
-        => new(id, title, description, "Optional features", OptionKind.Feature, balanced, minimal, targets);
+        => new(id, title, description, "Fonctionnalités facultatives", OptionKind.Feature, balanced, minimal, targets);
     private static CleanupOption Policy(string id, string title, string description, bool balanced, bool minimal)
-        => new(id, title, description, "Windows settings", OptionKind.Policy, balanced, minimal, []);
+        => new(id, title, description, "Paramètres Windows", OptionKind.Policy, balanced, minimal, []);
 
     public static string[] ForPreset(CleanupPreset preset) => Options
         .Where(o => preset switch
@@ -107,6 +107,14 @@ public static class CleanupCatalog
 
     public static bool MatchesApp(CleanupOption option, ProvisionedApp app) =>
         option.Kind == OptionKind.App && option.Targets.Any(target =>
-            app.DisplayName.Equals(target, StringComparison.OrdinalIgnoreCase) &&
-            app.PackageName.StartsWith(target + "_", StringComparison.OrdinalIgnoreCase));
+            (app.PackageName.StartsWith(target + "_", StringComparison.OrdinalIgnoreCase) ||
+             app.PackageName.StartsWith(target + "~", StringComparison.OrdinalIgnoreCase) ||
+             app.PackageName.Equals(target, StringComparison.OrdinalIgnoreCase)) &&
+            (app.DisplayName.Equals(target, StringComparison.OrdinalIgnoreCase) ||
+             app.DisplayName.StartsWith(target, StringComparison.OrdinalIgnoreCase) ||
+             target.StartsWith(app.DisplayName, StringComparison.OrdinalIgnoreCase) ||
+             string.IsNullOrWhiteSpace(app.DisplayName) ||
+             app.DisplayName.Equals("Copilot", StringComparison.OrdinalIgnoreCase) ||
+             app.DisplayName.Equals("Teams", StringComparison.OrdinalIgnoreCase) ||
+             app.DisplayName.Equals("Microsoft Teams", StringComparison.OrdinalIgnoreCase)));
 }

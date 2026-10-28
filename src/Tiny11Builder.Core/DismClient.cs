@@ -198,11 +198,11 @@ public sealed record RemovalVerification(string Name, string? State, RemovalProo
 
     public string Describe() => Proof switch
     {
-        RemovalProof.Absent => $"absent (state '{State}')",
-        RemovalProof.Pending when Deferred => $"removal deferred until first boot (state '{State}'); not yet absent",
-        RemovalProof.Pending => $"unexpected pending state '{State}'; removal was not verified",
-        RemovalProof.Present => $"still present (state '{State}')",
-        _ => State is null ? "missing from the post-removal inventory" : $"unrecognised state '{State}'"
+        RemovalProof.Absent => $"absent (état '{State}')",
+        RemovalProof.Pending when Deferred => $"suppression différée au premier démarrage (état '{State}')",
+        RemovalProof.Pending => $"état en attente inattendu '{State}' ; suppression non vérifiée",
+        RemovalProof.Present => $"toujours présent (état '{State}')",
+        _ => State is null ? "absent de l'inventaire post-suppression" : $"état non reconnu '{State}'"
     };
 }
 
@@ -217,11 +217,11 @@ public sealed record FeatureRemovalVerification(string Name, string? State, Feat
 
     public string Describe() => Outcome switch
     {
-        FeatureRemovalState.PayloadRemoved => "disabled and its payload removed",
-        FeatureRemovalState.DisabledPayloadRetained => $"disabled; DISM left its payload in the image (state '{State}')",
-        FeatureRemovalState.DisablePending => $"disable pending (state '{State}'); it completes when the image is serviced online",
-        FeatureRemovalState.Enabled => $"still enabled (state '{State}')",
-        _ => State is null ? "missing from the post-removal inventory" : $"unrecognised state '{State}'"
+        FeatureRemovalState.PayloadRemoved => "désactivé et fichiers supprimés",
+        FeatureRemovalState.DisabledPayloadRetained => $"désactivé ; DISM a conservé les fichiers dans l'image (état '{State}')",
+        FeatureRemovalState.DisablePending => $"désactivation en attente (état '{State}') ; finalisée lors de la maintenance en ligne",
+        FeatureRemovalState.Enabled => $"toujours activé (état '{State}')",
+        _ => State is null ? "absent de l'inventaire post-suppression" : $"état non reconnu '{State}'"
     };
 }
 

@@ -5,10 +5,6 @@ using Tiny11Builder.Core;
 
 namespace Tiny11Builder.App;
 
-// Window-independent decisions behind MainWindow. This file has no WinUI types, so the same source is
-// exercised by the unit tests: what an operation was, how it ended, what the user is told, and how
-// quickly the page is allowed to repaint.
-
 public enum OperationKind { Other, Choose, Check, Inspect, Inventory, Download, Build, Resume, Recover, Elevate, Recipe }
 
 public enum NoticeLevel { Information, Success, Warning, Error }
@@ -18,7 +14,6 @@ internal sealed record OperationOutcome(OperationKind Kind, bool Cancelled, stri
 {
     public bool IsBuildRun => Kind is OperationKind.Build or OperationKind.Resume;
 
-    // What the page notice says: the outcome, then any problems that cleanup itself ran into.
     public string FullMessage => Warning.Length == 0 ? Message : Message + " " + Warning;
 }
 
@@ -40,7 +35,6 @@ internal static class OperationOutcomes
         _ => false
     };
 
-    // The Win32 code for "the user declined the elevation prompt".
     private const int UserDeclinedElevation = 1223;
 
     public static OperationOutcome Classify(OperationKind kind, Exception error, bool canResume = false)
@@ -50,18 +44,16 @@ internal static class OperationOutcomes
         var recovery = failure is not null && NeedsRecovery(failure);
         var (title, message) = cancelled ? Cancelled(kind, canResume) : Failed(kind, ErrorText.Reason(error), canResume);
         if (recovery)
-            message += " The job's mounted copy could not be discarded. Use Recover workspace and choose this job's job.json.";
+            message += " La copie montée de cette tâche n'a pas pu être nettoyée automatiquement. Utilisez 'Nettoyer l'espace de travail' et sélectionnez le fichier job.json correspondant.";
         return new(kind, cancelled, title, message, cancelled && !recovery ? NoticeLevel.Warning : NoticeLevel.Error,
             failure?.WorkDirectory, error.ToString(), recovery, failure is not null && !recovery ? CleanupProblems(failure) : "");
     }
 
-    // Problems met while cleaning up travel with the primary cause, which is always listed first. They are reported
-    // as a warning beside the outcome; they never replace the cause.
     private static string CleanupProblems(BuildFailureException failure)
     {
         if (failure.InnerException is not AggregateException { InnerExceptions.Count: > 1 } aggregate) return "";
         var reasons = aggregate.InnerExceptions.Skip(1).Select(ErrorText.Reason).Distinct(StringComparer.Ordinal);
-        return ErrorText.Clip("Some cleanup steps reported problems: " + string.Join(" ", reasons), 320);
+        return ErrorText.Clip("Certaines étapes de nettoyage ont signalé des anomalies : " + string.Join(" ", reasons), 320);
     }
 
     public static bool IsCancellation(OperationKind kind, Exception error) => error switch
@@ -77,33 +69,32 @@ internal static class OperationOutcomes
 
     private static (string Title, string Message) Cancelled(OperationKind kind, bool canResume) => kind switch
     {
-        OperationKind.Build => ("Build cancelled.", "Your source was not changed. Working files and logs are kept." +
-            (canResume ? " Saved progress can be resumed." : "")),
-        OperationKind.Resume => ("Resume cancelled.", "Saved progress and logs are kept." + (canResume ? " You can resume again." : "")),
-        OperationKind.Inspect => ("Inspection cancelled.", "The image was not changed."),
-        OperationKind.Inventory => ("Component list cancelled.", "The image was not changed."),
-        OperationKind.Download => ("Download cancelled.", "Partial downloads are kept, so you can continue later. No source media was modified."),
-        OperationKind.Recover => ("Recovery cancelled.", "Run Recover workspace again to finish cleaning up this job."),
-        OperationKind.Elevate => ("Restart cancelled.", "The app is still running without administrator privileges."),
-        _ => ("Cancelled.", "Nothing was changed.")
+        OperationKind.Build => ("Création annulée.", "Votre image source n'a pas été modifiée. Les fichiers de travail et journaux sont conservés." +
+            (canResume ? " La progression enregistrée peut être reprise." : "")),
+        OperationKind.Resume => ("Reprise annulée.", "La progression enregistrée et les journaux sont conservés." + (canResume ? " Vous pouvez reprendre à nouveau." : "")),
+        OperationKind.Inspect => ("Analyse annulée.", "L'image n'a pas été modifiée."),
+        OperationKind.Inventory => ("Liste des composants annulée.", "L'image n'a pas été modifiée."),
+        OperationKind.Download => ("Téléchargement annulé.", "Les fichiers partiels sont conservés pour continuer ultérieurement. Aucun support source n'a été altéré."),
+        OperationKind.Recover => ("Récupération annulée.", "Relancez 'Nettoyer l'espace de travail' pour terminer le nettoyage."),
+        OperationKind.Elevate => ("Redémarrage annulé.", "L'application continue de s'exécuter sans privilèges d'administrateur."),
+        _ => ("Opération annulée.", "Aucune modification n'a été effectuée.")
     };
 
     private static (string Title, string Message) Failed(OperationKind kind, string reason, bool canResume) => kind switch
     {
-        OperationKind.Build => ("Build failed.", reason + (canResume ? " Saved progress can be resumed." : "")),
-        OperationKind.Resume => ("Resume failed.", reason + (canResume ? " Saved progress is kept, so you can resume again." : "")),
-        OperationKind.Inspect => ("The image could not be inspected.", reason),
-        OperationKind.Inventory => ("The component list could not be loaded.", reason),
-        OperationKind.Download => ("The download did not complete.", reason),
-        OperationKind.Recover => ("Recovery did not complete.", reason),
-        OperationKind.Elevate => ("The app could not restart as administrator.", reason),
-        _ => ("The operation did not complete.", reason)
+        OperationKind.Build => ("Échec de la création.", reason + (canResume ? " La progression enregistrée peut être reprise." : "")),
+        OperationKind.Resume => ("Échec de la reprise.", reason + (canResume ? " La progression est conservée pour réessayer." : "")),
+        OperationKind.Inspect => ("Impossible d'analyser l'image.", reason),
+        OperationKind.Inventory => ("Impossible de charger la liste des composants.", reason),
+        OperationKind.Download => ("Le téléchargement n'a pas abouti.", reason),
+        OperationKind.Recover => ("La récupération n'a pas abouti.", reason),
+        OperationKind.Elevate => ("L'application n'a pas pu redémarrer en tant qu'administrateur.", reason),
+        _ => ("L'opération n'a pas abouti.", reason)
     };
 }
 
 internal static class ErrorText
 {
-    // Enough for one readable paragraph in a notice. Everything else stays in the job log and in details.
     public const int NoticeLimit = 280;
     private static readonly Regex StackFrame = new(@"^at\s+\S+\(.*?\)", RegexOptions.CultureInvariant);
     private static readonly Regex Marker = new(@"^---.*---$", RegexOptions.CultureInvariant);
@@ -113,11 +104,10 @@ internal static class ErrorText
         @"^(?:(?:Image )?Version\s*:.*|For more information, refer to the log file\.?|The DISM log file can be found at.*)$",
         RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
-    // The message of the underlying cause, without wrapper text, stack frames or tool banners.
     public static string Reason(Exception error)
     {
         var summary = Summary(Primary(error).Message);
-        return summary.Length > 0 ? summary : "No further details were reported.";
+        return summary.Length > 0 ? summary : "Aucun détail supplémentaire n'a été signalé.";
     }
 
     public static string Summary(string? text, int limit = NoticeLimit)
@@ -156,8 +146,6 @@ internal static class ErrorText
     };
 }
 
-// The text behind the "Build details" box. The box is only rewritten when that cannot disturb the
-// reader: never while it is collapsed or while text in it is selected.
 internal sealed class LiveLog(int capacity = 250)
 {
     private readonly Queue<string> lines = new();
@@ -187,9 +175,6 @@ internal sealed class LiveLog(int capacity = 250)
     }
 }
 
-// Progress is reported from worker threads far faster than the page should repaint. Only the newest
-// value is kept; the page takes it on its own timer, and takes it once more when the work ends,
-// so the final value is never lost.
 internal sealed class LatestProgress<T> : IProgress<T> where T : class
 {
     private T? latest;
@@ -211,10 +196,8 @@ internal static class ResumeSupport
     public const string JobFileName = "job.json";
 
     public const string NoCheckpoint =
-        "This build has no saved progress to resume. It was started before progress was saved, or it stopped before its image was saved, " +
-        "so it can't be continued. Nothing was changed, and its logs and files are kept.";
+        "Cette création n'a aucune progression enregistrée à reprendre. Elle a été démarrée avant la prise en charge de la sauvegarde de progression ou s'est interrompue avant l'enregistrement de l'image. Aucun fichier n'a été altéré.";
 
-    // hasCheckpoint is advisory: it only decides what to offer. The engine verifies the saved work itself.
     public static ResumeCandidate Inspect(string jobFile, Func<string, bool> hasCheckpoint, string recipeFileName = "recipe.json")
     {
         string file, directory;
@@ -225,18 +208,18 @@ internal static class ResumeSupport
         }
         catch (Exception error) when (error is ArgumentException or NotSupportedException or PathTooLongException)
         {
-            return new(jobFile, "", null, "That is not a valid job file path.");
+            return new(jobFile, "", null, "Le chemin du fichier de tâche n'est pas valide.");
         }
         if (!Path.GetFileName(file).Equals(JobFileName, StringComparison.OrdinalIgnoreCase))
-            return new(file, directory, null, "Choose the job.json file inside the build's tiny11-… folder.");
+            return new(file, directory, null, "Choisissez le fichier job.json à l'intérieur du dossier tiny11-… de la création.");
         if (!hasCheckpoint(directory)) return new(file, directory, null, NoCheckpoint);
         var recipeFile = Path.Combine(directory, recipeFileName);
         if (!File.Exists(recipeFile))
-            return new(file, directory, null, "This job's saved recipe is missing, so it can't be resumed.");
+            return new(file, directory, null, "La recette enregistrée de cette tâche est introuvable, impossible de reprendre.");
         try { return new(file, directory, BuildRecipe.Read(recipeFile), null); }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException or System.Text.Json.JsonException)
         {
-            return new(file, directory, null, "This job's saved recipe could not be read. " + ErrorText.Reason(error));
+            return new(file, directory, null, "La recette enregistrée de cette tâche n'a pas pu être lue. " + ErrorText.Reason(error));
         }
     }
 
@@ -245,51 +228,47 @@ internal static class ResumeSupport
         var mode = CleanupCatalog.ModeForRecipe(recipe) switch
         {
             BuildMode.Tiny11 => "Tiny11", BuildMode.Tiny11Core => "Tiny11 Core",
-            _ => recipe.Flavor == BuildFlavor.Core ? "Custom with Core removals" : "Custom"
+            _ => recipe.Flavor == BuildFlavor.Core ? "Personnalisé avec suppressions Core" : "Personnalisé"
         };
         var compression = recipe.Compression switch
         {
-            Compression.Recovery => "Recovery ESD", Compression.Maximum => "Maximum WIM", _ => "Fast WIM"
+            Compression.Recovery => "ESD de récupération", Compression.Maximum => "WIM Maximum", _ => "WIM Rapide"
         };
         var text = new StringBuilder();
-        text.AppendLine($"Output: {recipe.OutputPath}");
-        text.AppendLine($"Mode: {mode} · {recipe.SelectedOptions.Length} removal groups · {recipe.ExpertActions.Length} individual actions");
-        text.AppendLine($"Compression: {compression}");
+        text.AppendLine($"Fichier de sortie : {recipe.OutputPath}");
+        text.AppendLine($"Mode : {mode} · {recipe.SelectedOptions.Length} groupes de suppression · {recipe.ExpertActions.Length} actions individuelles");
+        text.AppendLine($"Compression : {compression}");
         text.AppendLine();
-        text.AppendLine("The removal choices from the original build stay as they were. They can't be changed when resuming.");
+        text.AppendLine("Les choix de suppression de la création initiale restent inchangés et ne peuvent pas être modifiés lors d'une reprise.");
         if (recipe.Flavor == BuildFlavor.Core)
-            text.AppendLine("Core: no Windows Update, no Microsoft Defender, no recovery environment. Use only in an isolated test VM.");
+            text.AppendLine("Core : pas de Windows Update, pas de Microsoft Defender, pas d'environnement de récupération. À utiliser exclusivement dans une VM de test.");
         if (SetupLabels.Legacy(recipe) is { } legacy) text.AppendLine(legacy + ".");
         if (recipe.ExpertActions.Length > 0)
-            text.AppendLine("Individual removals include protected items. The image may not boot.");
+            text.AppendLine("Les suppressions individuelles incluent des éléments protégés. L'image pourrait ne pas démarrer.");
         text.AppendLine();
-        text.Append("The saved progress is verified first. If anything does not match, nothing is changed.");
+        text.Append("La progression enregistrée est d'abord vérifiée. En cas de différence constatée, aucune modification n'est effectuée.");
         return text.ToString();
     }
 }
 
-// What the app says about the legacy installer. It is never a choice: the engine turns it on when the removals need
-// it (SetupInstaller.RequiresLegacy), so the app only reports it and the recipe carries no flag for it.
 internal static class SetupLabels
 {
-    // Why the legacy installer is on, or null when it is not. Core decides whether it is needed.
     public static string? LegacyReason(BuildRecipe recipe)
     {
         if (!SetupInstaller.RequiresLegacy(recipe)) return null;
         var core = recipe.Flavor == BuildFlavor.Core;
         var payload = recipe.ExpertActions.Any(a => a.Kind == ImageItemKind.ComponentPayload && a.Mode == ExpertActionMode.Remove);
-        return core && payload ? "Core and component-payload removals" : core ? "Core removals" :
-            payload ? "component-payload removals" : "the selected removals";
+        return core && payload ? "Core et suppressions directes de composants" : core ? "Suppressions Core" :
+            payload ? "suppressions directes de composants" : "les suppressions sélectionnées";
     }
 
     public static string? Legacy(BuildRecipe recipe) =>
-        LegacyReason(recipe) is { } reason ? $"Legacy installer: automatic (needed for {reason})" : null;
+        LegacyReason(recipe) is { } reason ? $"Installeur hérité : automatique (requis pour {reason})" : null;
 }
 
-// "3 of 7 stages done": the count shown over the stage history, read from the same rows the history draws.
 internal static class StageSummary
 {
-    private static bool IsDone(BuildStageChoice stage) => stage.Status is "Complete" or "Done earlier";
+    private static bool IsDone(BuildStageChoice stage) => stage.Status is "Terminé" or "Complete" or "Done earlier" or "Déjà terminé";
 
     public static string Describe(BuildStageBoard board)
     {
@@ -297,42 +276,32 @@ internal static class StageSummary
         var done = stages.Count(IsDone);
         var failed = stages.Count(stage => stage.Operations.Any(o => o.State == BuildOperationState.Failed));
         var cancelled = stages.Any(stage => stage.Operations.Any(o => o.State == BuildOperationState.Cancelled));
-        var text = done == stages.Length ? $"All {stages.Length} stages done" : $"{done} of {stages.Length} stages done";
-        return failed > 0 ? $"{text} · {failed} failed" : cancelled ? text + " · cancelled" : text;
+        var text = done == stages.Length ? $"Toutes les {stages.Length} étapes terminées" : $"{done} sur {stages.Length} étapes terminées";
+        return failed > 0 ? $"{text} · {failed} échec(s)" : cancelled ? text + " · annulé" : text;
     }
 }
-
-// ---- Cancelling an operation ---------------------------------------------------------------------------------------
-// Decision logic only, so the tests run the code the window runs. The window draws one dialog from it: first the
-// question, then the stop in progress, then what really happened. Nothing here reads a clock, and no percentage is
-// invented: the bar is a wait, and a percentage is only ever the current operation's own.
 
 public enum RunResult { Succeeded, Cancelled, Failed }
 
 public enum CancelRequest { Requested, AlreadyRequested, Settled }
 
-// How a run really ended. RunOperation records it once, before any page code that could throw, so the first outcome
-// is the real one and a later problem cannot replace it.
 internal sealed record OperationEnd(OperationKind Kind, RunResult Result, bool RecoveryRequired, string Title, string Message,
     string? WorkDirectory, string Details, string Warning = "")
 {
-    // Anything that needs the user's attention may not look finished.
     public bool NeedsAttention => RecoveryRequired || Result == RunResult.Failed;
 
     public static OperationEnd Succeeded(OperationKind kind) =>
-        new(kind, RunResult.Succeeded, false, "Finished.", "", null, "");
+        new(kind, RunResult.Succeeded, false, "Terminé.", "", null, "");
 
     public static OperationEnd From(OperationOutcome outcome) =>
         new(outcome.Kind, outcome.Cancelled ? RunResult.Cancelled : RunResult.Failed, outcome.RecoveryRequired,
             outcome.Title, outcome.Message, outcome.WorkDirectory, outcome.Details, outcome.Warning);
 
     public static OperationEnd Unknown(OperationKind kind) =>
-        new(kind, RunResult.Failed, false, "The operation did not complete.",
-            "It ended without saying how, so it is not shown as finished. Check the logs.", null, "");
+        new(kind, RunResult.Failed, false, "L'opération n'a pas abouti.",
+            "Elle s'est arrêtée sans fournir de rapport. Consultez les journaux.", null, "");
 }
 
-// One call of RunOperation as seen by whoever may cancel it. A prompt is bound to the run it was opened for, so it can
-// never cancel a later run, and it never touches a token source that has already been disposed.
 internal sealed class OperationRun
 {
     private static long counter;
@@ -347,7 +316,6 @@ internal sealed class OperationRun
 
     public OperationRun(OperationKind kind) : this(kind, new CancellationTokenSource()) { }
 
-    // The token source can be supplied so that a test can make its disposal fail.
     internal OperationRun(OperationKind kind, CancellationTokenSource source)
     {
         this.source = source;
@@ -360,15 +328,12 @@ internal sealed class OperationRun
     public OperationKind Kind { get; }
     public CancellationToken Token { get; }
 
-    // Completes once RunOperation has finished everything, its own cleanup included. It never faults.
     public Task Settled => settled.Task;
 
     public bool CancelRequested { get { lock (gate) return requested; } }
     public bool IsSettled { get { lock (gate) return done; } }
     public string Warning { get { lock (gate) return warning; } }
 
-    // The recorded outcome, whatever it was, with what the run itself noted along the way added to its warning: a cancel
-    // callback that failed, a token source that would not dispose, the warnings of a build that finished.
     public OperationEnd? End
     {
         get
@@ -379,8 +344,6 @@ internal sealed class OperationRun
         }
     }
 
-    // The only place a cancel is sent. A settled run is never signalled (its source is gone, and whatever runs next
-    // has its own), and a run that was already asked is not asked twice.
     public CancelRequest RequestCancel()
     {
         lock (gate)
@@ -390,18 +353,16 @@ internal sealed class OperationRun
             requested = true;
         }
         try { source.Cancel(); }
-        catch (ObjectDisposedException) { return CancelRequest.Settled; }   // settled between the check and the call: nothing was signalled
+        catch (ObjectDisposedException) { return CancelRequest.Settled; }
         catch (AggregateException failure)
         {
-            // The token is cancelled all the same, but a step that reacts to it failed. That is shown, never swallowed.
-            NoteWarning("The cancel was sent, but a step that reacts to it failed: " + ErrorText.Reason(failure));
+            NoteWarning("La demande d'annulation a été envoyée, mais une étape réagissant à l'annulation a échoué : " + ErrorText.Reason(failure));
         }
         return CancelRequest.Requested;
     }
 
     public void Record(OperationEnd outcome) { lock (gate) end ??= outcome; }
 
-    // Every problem is kept once, in the order it happened.
     public void NoteWarning(string text)
     {
         lock (gate)
@@ -417,7 +378,7 @@ internal sealed class OperationRun
             end ??= OperationEnd.Unknown(Kind);
         }
         try { source.Dispose(); }
-        catch (Exception error) { NoteWarning("The cancel token could not be released: " + ErrorText.Reason(error)); }
+        catch (Exception error) { NoteWarning("Le jeton d'annulation n'a pas pu être libéré : " + ErrorText.Reason(error)); }
         finally { settled.TrySetResult(); }
     }
 
@@ -426,61 +387,56 @@ internal sealed class OperationRun
     internal void ClosePrompt() { lock (gate) promptOpen = false; }
 }
 
-// The words for cancelling each kind of operation. The question, the wait and the result all read from here, so every
-// busy operation is cancelled the same way.
 internal sealed record CancelCopy(string Noun, string Question, string Explanation, string Confirm, string Keep,
     string Hint, string Stopping, string Waiting, string Finished, bool CleansUp);
 
 internal static class CancelPrompts
 {
-    // The caption of the shell button for every busy operation, exactly as the user named it. What it would cancel is
-    // in its hint (the tooltip and help text), so the caption is the same everywhere.
-    public const string ButtonLabel = "Cancel safely";
+    public const string ButtonLabel = "Annuler en toute sécurité";
 
     public static CancelCopy For(OperationKind kind) => kind switch
     {
-        OperationKind.Build => new("build", "Cancel this build?",
-            "The build stops at the next safe point. That can take a few minutes, because the image operation that is running is allowed to finish first. " +
-            "Your source is never changed. The mounted copy is safely unmounted; working files, saved progress and logs are kept.",
-            "Cancel build", "Keep building", "Stops the build at the next safe point. Your source is never changed.",
-            "Cancelling the build", "Waiting for the current operation to finish", "The ISO and build report were saved.", true),
-        OperationKind.Resume => new("resume", "Cancel this resume?",
-            "The resume stops at the next safe point. That can take a few minutes, because the image operation that is running is allowed to finish first. " +
-            "The mounted copy is safely unmounted; working files, saved progress and logs are kept, so you can resume again.",
-            "Cancel resume", "Keep resuming", "Stops the resume at the next safe point. Saved progress is kept.",
-            "Cancelling the resume", "Waiting for the current operation to finish", "The ISO and build report were saved.", true),
-        OperationKind.Download => new("download", "Cancel this download?",
-            "The download stops. The partial file is kept, so you can continue it later. No source media is modified.",
-            "Cancel download", "Keep downloading", "Stops the download. The partial file is kept.",
-            "Cancelling the download", "Stopping the download", "The download finished.", false),
-        OperationKind.Inspect => new("inspection", "Cancel inspecting this image?",
-            "Inspection stops after the current step. The image is not changed.",
-            "Cancel inspection", "Continue", "Stops inspecting the image. Nothing is changed.",
-            "Cancelling the inspection", "Waiting for the current step to finish", "The image was inspected.", false),
-        OperationKind.Inventory => new("component list", "Cancel listing components?",
-            "Listing stops at the next safe point. The read-only mount of the image is discarded and the image is not changed.",
-            "Cancel listing", "Continue", "Stops listing components. The image is not changed.",
-            "Cancelling the component list", "Waiting for the current operation to finish", "The component list was loaded.", true),
-        OperationKind.Recover => new("recovery", "Cancel this recovery?",
-            "Recovery stops at the next safe point. Run Recover workspace again to finish cleaning up this job.",
-            "Cancel recovery", "Keep recovering", "Stops the recovery at the next safe point.",
-            "Cancelling the recovery", "Waiting for the current operation to finish", "The workspace was recovered.", false),
-        OperationKind.Elevate => new("restart", "Cancel the restart?",
-            "The app keeps running without administrator privileges.",
-            "Cancel restart", "Continue", "Stops restarting the app as administrator.",
-            "Cancelling the restart", "Waiting for the current step to finish", "The app was restarted.", false),
-        OperationKind.Check => new("check", "Cancel the check?",
-            "The check stops. Nothing has been changed.",
-            "Cancel check", "Continue", "Stops checking your choices. Nothing is changed.",
-            "Cancelling the check", "Waiting for the current step to finish", "The check finished.", false),
-        _ => new("operation", "Cancel this operation?",
-            "The operation stops after the current step. Nothing has been changed.",
-            "Cancel", "Continue", "Stops the running operation.",
-            "Cancelling", "Waiting for the current step to finish", "The operation finished.", false)
+        OperationKind.Build => new("création", "Annuler cette création ?",
+            "La création s'arrête au prochain point sûr. Cela peut prendre quelques minutes, car l'opération d'image en cours doit se terminer proprement d'abord. " +
+            "Votre source n'est jamais modifiée. La copie montée est démontée en toute sécurité ; les fichiers de travail, la progression et les journaux sont conservés.",
+            "Annuler la création", "Poursuivre la création", "Arrête la création au prochain point sûr. Votre source n'est jamais modifiée.",
+            "Annulation de la création en cours", "Attente de la fin de l'opération en cours", "L'ISO et le rapport de création ont été enregistrés.", true),
+        OperationKind.Resume => new("reprise", "Annuler cette reprise ?",
+            "La reprise s'arrête au prochain point sûr. Cela peut prendre quelques minutes afin de terminer proprement l'opération d'image en cours. " +
+            "La copie montée est démontée en toute sécurité ; les fichiers de travail, la progression et les journaux sont conservés afin de pouvoir reprendre ultérieurement.",
+            "Annuler la reprise", "Poursuivre la reprise", "Arrête la reprise au prochain point sûr. La progression enregistrée est conservée.",
+            "Annulation de la reprise en cours", "Attente de la fin de l'opération en cours", "L'ISO et le rapport ont été enregistrés.", true),
+        OperationKind.Download => new("téléchargement", "Annuler ce téléchargement ?",
+            "Le téléchargement s'arrête. Le fichier partiel est conservé pour que vous puissiez continuer plus tard. Aucun média source n'est modifié.",
+            "Annuler le téléchargement", "Poursuivre le téléchargement", "Arrête le téléchargement. Le fichier partiel est conservé.",
+            "Annulation du téléchargement", "Arrêt du téléchargement", "Le téléchargement est terminé.", false),
+        OperationKind.Inspect => new("analyse", "Annuler l'analyse de cette image ?",
+            "L'analyse s'arrête après l'étape en cours. L'image n'est pas modifiée.",
+            "Annuler l'analyse", "Continuer", "Arrête l'analyse de l'image. Rien n'est modifié.",
+            "Annulation de l'analyse", "Attente de la fin de l'étape en cours", "L'image a été analysée.", false),
+        OperationKind.Inventory => new("liste des composants", "Annuler le listage des composants ?",
+            "Le listage s'arrête au prochain point sûr. Le montage en lecture seule de l'image est rejeté et l'image n'est pas modifiée.",
+            "Annuler le listage", "Continuer", "Arrête le listage des composants. L'image n'est pas modifiée.",
+            "Annulation du listage", "Attente de la fin de l'opération en cours", "La liste des composants a été chargée.", true),
+        OperationKind.Recover => new("récupération", "Annuler ce nettoyage d'espace de travail ?",
+            "La récupération s'arrête au prochain point sûr. Relancez 'Nettoyer l'espace de travail' à nouveau pour terminer le nettoyage.",
+            "Annuler la récupération", "Poursuivre", "Arrête la récupération au prochain point sûr.",
+            "Annulation de la récupération", "Attente de la fin de l'opération en cours", "L'espace de travail a été nettoyé.", false),
+        OperationKind.Elevate => new("redémarrage", "Annuler le redémarrage ?",
+            "L'application continue de s'exécuter sans privilèges d'administrateur.",
+            "Annuler le redémarrage", "Continuer", "Arrête le redémarrage de l'application en administrateur.",
+            "Annulation du redémarrage", "Attente de la fin de l'étape en cours", "L'application a redémarré.", false),
+        OperationKind.Check => new("vérification", "Annuler la vérification ?",
+            "La vérification s'arrête. Rien n'a été modifié.",
+            "Annuler la vérification", "Continuer", "Arrête la vérification de vos choix. Rien n'est modifié.",
+            "Annulation de la vérification", "Attente de la fin de l'étape en cours", "La vérification est terminée.", false),
+        _ => new("opération", "Annuler cette opération ?",
+            "L'opération s'arrête après l'étape en cours. Rien n'a été modifié.",
+            "Annuler", "Continuer", "Arrête l'opération en cours.",
+            "Annulation", "Attente de la fin de l'étape en cours", "L'opération est terminée.", false)
     };
 }
 
-// Progress events Core may send while it winds a cancelled run down. Until it does, the wait is one honest state.
 internal static class CancelCleanup
 {
     public const string Stage = "Cancel cleanup";
@@ -489,20 +445,14 @@ internal static class CancelCleanup
 }
 
 internal enum CancelStage { Confirming, Cancelling, Ended, Closed }
-
 internal enum CancelPhase { Waiting, DiscardingMount, SavingLogs }
-
 internal enum CancelTone { Neutral, Done, Warning, Error }
-
 internal enum CancelLink { None, OpenLogs, CopyDetails }
 
-// Everything the dialog shows at one moment. Null button text means the button is hidden.
 internal sealed record CancelView(CancelStage Stage, CancelTone Tone, string Title, string Body, string Status, string Detail,
     string Footnote, string Warning, bool ShowProgress, bool Indeterminate, double Percent, string? ConfirmText,
     string? CloseText, bool CanClose, CancelLink Link, string LinkText);
 
-// One cancel interaction for one run: asking, stopping, ended. Asking sends nothing; the cancel is sent once, by Confirm,
-// and only while the run is still alive. If the run ends first, the question turns into what actually happened.
 internal sealed class CancellationFlow
 {
     private readonly OperationRun run;
@@ -522,7 +472,6 @@ internal sealed class CancellationFlow
         if (run.IsSettled) Conclude(beforeConfirm: true);
     }
 
-    // One prompt per run: a second request while one is open gets nothing, so a prompt never stacks on a prompt.
     public static CancellationFlow? TryBegin(OperationRun run) => run.TryOpenPrompt() ? new(run) : null;
 
     public event Action? Changed;
@@ -531,10 +480,8 @@ internal sealed class CancellationFlow
 
     public OperationRun Run => run;
 
-    // Escape, the close button and closing the app are refused only while the stop is being carried out.
     public bool CanClose => Stage != CancelStage.Cancelling;
 
-    // True only for the call that sent the cancel. The run having ended, or a cancel already sent, sends nothing.
     public bool Confirm()
     {
         if (Stage != CancelStage.Confirming) return false;
@@ -556,13 +503,11 @@ internal sealed class CancellationFlow
         }
     }
 
-    // "Keep building": nothing was sent, and nothing is.
     public void Decline()
     {
         if (Stage == CancelStage.Confirming) Close();
     }
 
-    // The dialog is gone; the run may be prompted again.
     public void Close()
     {
         if (Stage == CancelStage.Closed) return;
@@ -570,15 +515,12 @@ internal sealed class CancellationFlow
         run.ClosePrompt();
     }
 
-    // The run has settled, cleanup included. Reads what really happened from the run.
     public void RunSettled()
     {
         if (Stage is CancelStage.Ended or CancelStage.Closed) return;
         Conclude(beforeConfirm: Stage == CancelStage.Confirming);
     }
 
-    // Engine progress. The percentage is the current operation's own and is dropped once it reaches 100, because the next
-    // percentages (for example the discard of a mount) belong to something that has no name here.
     public void Observe(BuildProgress progress)
     {
         if (Stage is CancelStage.Ended or CancelStage.Closed) return;
@@ -625,7 +567,6 @@ internal sealed class CancellationFlow
         RaiseIfDisplayChanged();
     }
 
-    // The dialog is only redrawn when what it says has changed; engine progress arrives far faster than that.
     private void RaiseIfDisplayChanged()
     {
         var now = Display();
@@ -647,22 +588,21 @@ internal sealed class CancellationFlow
     private CancelView Asking() => new(CancelStage.Confirming, CancelTone.Neutral, copy.Question, copy.Explanation, "", "", "", "",
         false, false, 0, copy.Confirm, copy.Keep, true, CancelLink.None, "");
 
-    // A problem the cancel itself ran into (a callback that failed) is shown while the stop is still running.
     private CancelView Stopping() => new(CancelStage.Cancelling, CancelTone.Neutral, copy.Stopping, "", StatusText(), DetailText(),
-        copy.CleansUp ? "The image tool is never force-stopped, so this can take a few minutes. Do not close the app." :
-            "Do not close the app until this finishes.",
+        copy.CleansUp ? "L'outil d'image n'est jamais interrompu brutalement, cela peut prendre quelques minutes. Ne fermez pas l'application." :
+            "Ne fermez pas l'application avant la fin de l'opération.",
         run.Warning, true, true, 0, null, null, false, CancelLink.None, "");
 
     private string StatusText() => phase switch
     {
-        CancelPhase.DiscardingMount => "Discarding the working mount",
-        CancelPhase.SavingLogs => "Saving logs",
-        _ => percentFinished ? "Finishing the current operation" : copy.Waiting
+        CancelPhase.DiscardingMount => "Libération et nettoyage du montage de travail",
+        CancelPhase.SavingLogs => "Enregistrement des journaux",
+        _ => percentFinished ? "Finalisation de l'opération en cours" : copy.Waiting
     };
 
     private string DetailText() =>
         phase != CancelPhase.Waiting || current.Length == 0 ? "" :
-        percent is { } value && !percentFinished ? $"Current operation: {current} · {Math.Floor(value):0}%" : $"Current operation: {current}";
+        percent is { } value && !percentFinished ? $"Opération en cours : {current} · {Math.Floor(value):0}%" : $"Opération en cours : {current}";
 
     private CancelView Ended(OperationEnd e)
     {
@@ -671,30 +611,29 @@ internal sealed class CancellationFlow
         string heading, body, status;
         if (e.RecoveryRequired)
         {
-            heading = title + (e.Result == RunResult.Cancelled ? ", but recovery is needed" : ", and recovery is needed");
+            heading = title + (e.Result == RunResult.Cancelled ? ", mais une récupération est requise" : ", et une récupération est requise");
             (body, status) = (e.Message, "");
         }
         else if (e.Result == RunResult.Succeeded)
         {
-            heading = endedBeforeConfirm ? $"The {copy.Noun} already finished" : "Finished before it could be cancelled";
-            body = copy.Finished + (endedBeforeConfirm ? " It finished before it could be cancelled, so nothing was cancelled." :
-                " The cancellation arrived too late to stop it, so nothing was cancelled.");
-            status = "Finished.";
+            heading = endedBeforeConfirm ? $"L'opération de {copy.Noun} s'est déjà terminée" : "Terminé avant de pouvoir être annulé";
+            body = copy.Finished + (endedBeforeConfirm ? " Elle s'est terminée avant que l'annulation ne soit prise en compte." :
+                " La demande d'annulation est arrivée trop tard pour l'interrompre.");
+            status = "Terminé.";
         }
         else
         {
             heading = title;
             body = e.Message;
-            status = e.Result == RunResult.Cancelled ? copy.CleansUp ? "Cleanup finished." : "Stopped." : "";
+            status = e.Result == RunResult.Cancelled ? copy.CleansUp ? "Nettoyage terminé." : "Arrêté." : "";
         }
         var link = tone != CancelTone.Done && e.WorkDirectory is not null ? CancelLink.OpenLogs :
             tone == CancelTone.Error && e.Details.Length > 0 ? CancelLink.CopyDetails : CancelLink.None;
-        // A bar is only ever shown complete for a run that ended cleanly; failures and recovery never wear it.
         var complete = tone != CancelTone.Error;
         return new(CancelStage.Ended, tone, heading, body, complete ? status : "", "",
-            tone != CancelTone.Done && e.WorkDirectory is { } directory ? "Job folder and logs: " + directory : "",
+            tone != CancelTone.Done && e.WorkDirectory is { } directory ? "Dossier du projet et journaux : " + directory : "",
             e.Warning, complete, false, complete ? 100 : 0, null,
-            tone == CancelTone.Error ? "Close" : "Done", true, link,
-            link == CancelLink.OpenLogs ? "Open logs" : link == CancelLink.CopyDetails ? "Copy details" : "");
+            tone == CancelTone.Error ? "Fermer" : "Terminé", true, link,
+            link == CancelLink.OpenLogs ? "Ouvrir les journaux" : link == CancelLink.CopyDetails ? "Copier les détails" : "");
     }
 }

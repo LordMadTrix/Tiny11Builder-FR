@@ -36,7 +36,47 @@ public sealed class OfflineRegistry : IOfflineRegistry
                 Set(value.Hive switch { PolicyHive.Software => software, PolicyHive.DefaultUser => user, _ => system },
                     value.Key.Replace("{ControlSet}", controlSet, StringComparison.Ordinal), value.Name, value.Value, log);
         if (recipe.PreferLocalAccount)
+        {
             Set(software, @"Microsoft\Windows\CurrentVersion\OOBE", "BypassNRO", 1, log);
+            Set(software, @"Microsoft\Windows\CurrentVersion\OOBE", "DisableOOBEUpdate", 1, log);
+            Set(software, @"Microsoft\Windows\CurrentVersion\OOBE", "HideOnlineAccountScreens", 1, log);
+            Set(software, @"Microsoft\Windows\CurrentVersion\OOBE", "DisableVoice", 1, log);
+            Set(software, @"Policies\Microsoft\Windows\OOBE", "DisablePrivacyExperience", 1, log);
+            Set(software, @"Policies\Microsoft\Windows\OOBE", "ProtectYourPC", 3, log);
+        }
+        if (recipe.GamerMode)
+        {
+            Set(user, @"Software\Microsoft\GameBar", "AllowAutoGameMode", 1, log);
+            Set(user, @"System\GameConfigStore", "GameDVR_Enabled", 0, log);
+            Set(software, @"Policies\Microsoft\Windows\GameDVR", "AllowGameDVR", 0, log);
+            Set(user, @"Control Panel\Desktop", "MenuShowDelay", "0", log);
+        }
+        if (recipe.DisableUpdatesAtFirstBoot || recipe.Flavor == BuildFlavor.Core)
+        {
+            Set(software, @"Policies\Microsoft\Windows\WindowsUpdate\AU", "NoAutoUpdate", 1, log);
+            Set(software, @"Policies\Microsoft\Windows\WindowsUpdate\AU", "AUOptions", 2, log);
+            Set(software, @"Policies\Microsoft\Windows\WindowsUpdate", "DisableWindowsUpdateAccess", 1, log);
+        }
+        if (recipe.DisableDefender || recipe.Flavor == BuildFlavor.Core)
+        {
+            foreach (var control in system.GetSubKeyNames().Where(key =>
+                         System.Text.RegularExpressions.Regex.IsMatch(key, @"^ControlSet\d{3}$")))
+            {
+                using var services = OpenWriteKey(system, control + @"\Services");
+                var names = services.GetSubKeyNames().ToHashSet(StringComparer.OrdinalIgnoreCase);
+                foreach (var name in new[] { "WinDefend", "WdNisSvc", "WdNisDrv", "WdFilter", "Sense" })
+                {
+                    if (!names.Contains(name)) { log($"Not present in {control}: service {name}"); continue; }
+                    Set(system, $@"{control}\Services\{name}", "Start", 4, log);
+                    log($"Defender: disabled service {control}\\{name}");
+                }
+            }
+            Set(software, @"Policies\Microsoft\Windows Defender", "DisableAntiSpyware", 1, log);
+            Set(software, @"Policies\Microsoft\Windows Defender\Real-Time Protection", "DisableRealtimeMonitoring", 1, log);
+            Set(software, @"Policies\Microsoft\Windows Defender\Real-Time Protection", "DisableBehaviorMonitoring", 1, log);
+            Set(software, @"Policies\Microsoft\Windows Defender\Real-Time Protection", "DisableOnAccessProtection", 1, log);
+            Set(software, @"Policies\Microsoft\Windows Defender\Real-Time Protection", "DisableScanOnRealtimeEnable", 1, log);
+        }
         if (recipe.Flavor == BuildFlavor.Core)
         {
             foreach (var control in system.GetSubKeyNames().Where(key =>
@@ -44,17 +84,13 @@ public sealed class OfflineRegistry : IOfflineRegistry
             {
                 using var services = OpenWriteKey(system, control + @"\Services");
                 var names = services.GetSubKeyNames().ToHashSet(StringComparer.OrdinalIgnoreCase);
-                foreach (var name in new[] { "wuauserv", "UsoSvc", "WaaSMedicSvc", "WinDefend", "WdNisSvc", "WdNisDrv", "WdFilter", "Sense" })
+                foreach (var name in new[] { "wuauserv", "UsoSvc", "WaaSMedicSvc" })
                 {
                     if (!names.Contains(name)) { log($"Not present in {control}: service {name}"); continue; }
                     Set(system, $@"{control}\Services\{name}", "Start", 4, log);
                     log($"Core: disabled service {control}\\{name}");
                 }
             }
-            Set(software, @"Policies\Microsoft\Windows\WindowsUpdate\AU", "NoAutoUpdate", 1, log);
-            Set(software, @"Policies\Microsoft\Windows\WindowsUpdate", "DisableWindowsUpdateAccess", 1, log);
-            Set(software, @"Policies\Microsoft\Windows Defender", "DisableAntiSpyware", 1, log);
-            Set(software, @"Policies\Microsoft\Windows Defender\Real-Time Protection", "DisableRealtimeMonitoring", 1, log);
         }
     }
 

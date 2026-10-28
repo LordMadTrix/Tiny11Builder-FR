@@ -25,7 +25,7 @@ public sealed record WindowsImage(
     int Index, string Name, string Description, string Architecture,
     Version Version, string Edition, string Installation, long Size)
 {
-    public string Summary => $"{Name}  |  {Architecture}  |  build {Version.Build}.{Version.Revision}";
+    public string Summary => $"{Name}  |  {Architecture}  |  version {Version.Build}.{Version.Revision}";
     public bool IsSupported => Index > 0 && Size > 0 && Version.Major == 10 && Version.Build >= 22621 &&
         Installation.Equals("Client", StringComparison.OrdinalIgnoreCase) && Architecture is "x64" or "arm64";
 
@@ -33,7 +33,7 @@ public sealed record WindowsImage(
     {
         if (!IsSupported)
             throw new InvalidDataException(
-                "Choose a Windows 11 client image, build 22621 (22H2) or newer, in x64 or ARM64 format.");
+                "Choisissez une image Windows 11 client, version 22621 (22H2) ou supérieure, au format x64 ou ARM64.");
     }
 }
 
@@ -44,7 +44,6 @@ public sealed record BuildProgress(string Stage, string Message, double? Percent
 public sealed record BuildResult(string IsoPath, string Sha256, string ReportPath, string WorkDirectory,
     TimeSpan Duration = default, long RemovedLogicalBytes = 0, long OmittedSetupBytes = 0)
 {
-    // Problems after the ISO was published (report, cleanup) or in advisory data. They never turn a published ISO into a failure.
     public IReadOnlyList<string> Warnings { get; init; } = [];
 }
 public sealed record PolicyValue(PolicyHive Hive, string Key, string Name, object Value);
@@ -67,53 +66,70 @@ public sealed record BuildRecipe
     public string[] SelectedOptions { get; init; } = [];
     public bool EnableNetFx3 { get; init; }
     public bool CompactInstallation { get; init; } = true;
-    public bool PreferLocalAccount { get; init; }
+    public bool PreferLocalAccount { get; init; } = true;
+    public string UnattendUsername { get; init; } = "";
+    public string UnattendPassword { get; init; } = "";
+    public string UnattendComputerName { get; init; } = "";
+    public bool AutoLogon { get; init; } = true;
     public bool KeepWorkingFiles { get; init; }
     public bool TurboMode { get; init; }
     public bool RemoveRedundantData { get; init; }
     public bool OmitNetFx3SetupPayload { get; init; }
+    public string SelectedBrowser { get; init; } = "firefox";
+    public bool InstallVlc { get; init; } = true;
+    public bool InstallSevenZip { get; init; } = true;
+    public bool InstallNotepadPlus { get; init; }
+    public bool InstallLibreOffice { get; init; }
+    public string DriverPath { get; init; } = "";
+    public bool GamerMode { get; init; } = true;
+    public bool DisableDefender { get; init; }
+    public bool DisableUpdatesAtFirstBoot { get; init; } = true;
+    public string DefenderControlPath { get; init; } = "";
+    public bool InstallMadTweak { get; init; } = true;
+    public string MadTweakPath { get; init; } = @"C:\Users\madtr\Downloads\Devlopement\MadTweak\dist\MadTweak.exe";
 
     public void ValidateOptions()
     {
         if (SchemaVersion != 1 || !Enum.IsDefined(Compression) || !Enum.IsDefined(Flavor) ||
             (Mode is { } mode && !Enum.IsDefined(mode)))
-            throw new InvalidDataException("This recipe version or compression mode is not supported.");
+            throw new InvalidDataException("Cette version de recette ou ce mode de compression n'est pas pris en charge.");
         if (Flavor == BuildFlavor.Core && !CoreAcknowledged)
-            throw new InvalidDataException("Core requires acknowledgement of the loss of updates, recovery and antivirus protection.");
+            throw new InvalidDataException("Tiny11 Core requiert l'acceptation de la perte des mises à jour, de la récupération et de la protection antivirus.");
         if (ExpertActions is null || ExpertActions.Any(action => action is null) ||
             (ExpertActions.Length > 0 && !ExpertAcknowledged))
-            throw new InvalidDataException("Custom removals require acknowledgement of the risk of an unbootable image.");
+            throw new InvalidDataException("Les suppressions personnalisées requièrent l'acceptation du risque d'obtenir une image non amorçable.");
         if (ExpertActions.Select(a => (a.Kind, a.Identity)).Distinct().Count() != ExpertActions.Length)
-            throw new InvalidDataException("Duplicate custom image actions.");
+            throw new InvalidDataException("Actions d'image personnalisées en double.");
         foreach (var action in ExpertActions)
             if (!Enum.IsDefined(action.Kind) || !Enum.IsDefined(action.Mode) || string.IsNullOrWhiteSpace(action.Identity) ||
                 action.Identity.Contains('\\') || action.Identity.Contains('/') ||
                 (action.Mode == ExpertActionMode.Disable && action.Kind is not (ImageItemKind.Feature or ImageItemKind.Service)))
-                throw new InvalidDataException("Invalid custom image action.");
+                throw new InvalidDataException("Action d'image personnalisée non valide.");
         if (ImageIndex < 1 || SelectedOptions is null ||
             SelectedOptions.Length != SelectedOptions.Distinct(StringComparer.Ordinal).Count())
-            throw new InvalidDataException("Invalid image index or duplicate cleanup options.");
+            throw new InvalidDataException("Index d'image non valide ou options de nettoyage en double.");
         foreach (var id in SelectedOptions)
             if (!CleanupCatalog.Options.Any(o => o.Id == id))
-                throw new InvalidDataException($"Unknown cleanup option: {id}");
+                throw new InvalidDataException($"Option de nettoyage inconnue : {id}");
         if (Mode is BuildMode.Tiny11 or BuildMode.Tiny11Core &&
             (Flavor != (Mode == BuildMode.Tiny11Core ? BuildFlavor.Core : BuildFlavor.Regular) ||
              ExpertActions.Length > 0 ||
              !SelectedOptions.ToHashSet(StringComparer.Ordinal).SetEquals(CleanupCatalog.ForMode(Mode.Value))))
-            throw new InvalidDataException("Use Custom for changes to the Tiny11 or Tiny11 Core removal sets.");
+            throw new InvalidDataException("Utilisez le mode Personnalisé pour modifier les suppressions Tiny11 ou Tiny11 Core.");
     }
 
     public static BuildRecipe Read(string path)
     {
         var recipe = JsonSerializer.Deserialize<BuildRecipe>(File.ReadAllText(path), JsonDefaults.Options)
-            ?? throw new InvalidDataException("The recipe is empty.");
+            ?? throw new InvalidDataException("La recette est vide.");
         recipe.ValidateOptions();
         return recipe;
     }
 
     public void Write(string path)
     {
-        ValidateOptions();
+        var directory = Path.GetDirectoryName(path);
+        if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
         File.WriteAllText(path, JsonSerializer.Serialize(this, JsonDefaults.Options));
     }
 }

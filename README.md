@@ -1,66 +1,95 @@
-# Tiny11 Builder
+# Tiny11 Builder (Version Française & Améliorée)
 
-Build a smaller Windows 11 ISO with a native WinUI app. Download an official
-Windows image or use your own, choose what to remove, and create your ISO.
+Créez une image ISO de Windows 11 allégée, optimisée et prête à l'emploi grâce à une application native WinUI ou aux scripts PowerShell automatisés.
 
-## Download
+## Nouveautés & Améliorations intégrées
 
-[**Get the latest version**](https://github.com/ntdevlabs/tiny11builder/releases/latest)
+1. **Installation sans surveillance enrichie (`autounattend.xml`)** :
+   - Contournement automatique de l'obligation de connexion Internet / Wi-Fi lors de l'OOBE.
+   - Suppression des écrans de télémétrie et des suggestions promotionnelles au premier démarrage.
+   - Contournement des restrictions matérielles (TPM 2.0, Secure Boot, CPU, RAM) dès la phase d'installation Windows PE.
+   - Script post-installation automatique (`SetupComplete.cmd`) pour désactiver les tâches de télémétrie résiduelles.
 
-Choose **x64** for Intel/AMD PCs or **ARM64** for Windows on ARM. Extract the
-entire ZIP and open `Tiny11Builder.exe`. Administrator approval is required.
+2. **Intégration directe de pilotes (Drivers)** :
+   - Les scripts proposent désormais d'injecter facilement vos dossiers de pilotes (`.inf` pour Wi-Fi, Ethernet, NVMe/VMD Intel/AMD) directement dans l'image système avant la finalisation.
 
-## Choose your build
+3. **Optimisations Performances & Confidentialité (Gaming & Télémétrie)** :
+   - Désactivation du service de télémétrie en arrière-plan `DiagTrack` et `dmwappushservice`.
+   - Optimisation de la réactivité système (`MenuShowDelay` à 0).
+   - Mode Jeu activé par défaut et désactivation des captures GameDVR consommatrices de ressources en arrière-plan.
 
-| Mode | What it does |
+4. **Créateur de clé USB bootable UEFI universelle (`Create-Tiny11BootableUSB.ps1`)** :
+   - Plus besoin de logiciel tiers comme Rufus : formatez et préparez directement une clé USB en FAT32/UEFI.
+   - Découpage automatique de l'image (`install.swm`) via DISM si la taille dépasse 4 Go pour respecter les spécifications UEFI standard.
+
+5. **Navigateurs web & Alternatives Open-Source gratuites** :
+   - Choix du navigateur à intégrer au premier démarrage : **Mozilla Firefox**, **Brave Browser**, **Google Chrome**, ou **LibreWolf**.
+   - Pré-installation facultative d'outils libres recommandés pour remplacer les applications Microsoft supprimées : **VLC Media Player** (remplace Films & TV), **7-Zip** (compression d'archives), **Notepad++** (éditeur de texte), et **LibreOffice** (suite bureautique).
+
+6. **Options graphiques & Personnalisation de l'interface** :
+   - Menu latéral gauche modernisé avec icônes Fluent Segoe MDL2 Assets pour chaque étape.
+   - Sélecteur de **Couleur d'accentuation** dynamique en direct (Bleu Windows, Violet Royal, Vert Émeraude, Orange Coucher de soleil, Rouge Carmin, Cyan Néon, Rose Fushia) en complément du thème Clair/Sombre.
+
+7. **Nouvelles options système avancées** :
+   - **Bloquer les mises à jour au premier démarrage** : évite que Windows Update s'accapare la connexion et le processeur dès la fin de l'installation OOBE.
+   - **Désactiver Windows Defender** : désactive la protection en temps réel, l'analyse comportementale et les services de sécurité hors-ligne pour libérer un maximum de mémoire vive (RAM) et de cycles CPU.
+   - **Intégration directe de Defender Control (dControl)** : détecte et embarque automatiquement l'utilitaire portable `Defender Control` dans `C:\Tools\Defender Control` de l'image avec création d'un raccourci sur le Bureau pour réactiver ou désactiver Defender en 1 clic selon vos besoins.
+
+---
+
+## Modes de création
+
+| Mode | Description |
 | --- | --- |
-| Tiny11 | Removes bundled apps and unwanted features while keeping updates, Defender and recovery. |
-| Tiny11 Core | Trims further by removing servicing and recovery support and disabling Defender. |
-| Custom | Choose individual apps, components, features and services to remove or keep. |
+| **Tiny11** | Supprime les applications superflues et fonctionnalités indésirables tout en conservant Windows Update, Microsoft Defender et les outils de récupération. |
+| **Tiny11 Core** | Épuration maximale : supprime les services de maintenance, la récupération système et désactive Windows Defender. |
+| **Personnalisé** | Choisissez individuellement les applications, composants, fonctionnalités et services à retirer ou conserver. |
 
-Turbo mode speeds up image processing. Interrupted builds can resume from saved
-progress after the image is committed or compressed. Core and component-store
-removals automatically use the legacy Windows installer.
+Le mode **Turbo** accélère le traitement de l'image. Les modes Core et les suppressions du magasin de composants utilisent automatiquement l'installateur Windows classique (Legacy).
 
-**Core cannot be updated or serviced. Protected Custom removals can break
-Windows. Test your ISO in a VM before installing it.**
+> [!WARNING]
+> **Tiny11 Core ne peut pas recevoir les mises à jour Windows.** Certaines suppressions protégées en mode personnalisé peuvent rendre Windows instable. Testez toujours votre ISO dans une machine virtuelle (VM) avant toute installation réelle.
 
-## Video
+---
 
-[**Watch on YouTube**](https://youtu.be/LfEWIz5mQ8A)
+## Utilisation des scripts PowerShell
 
-## Screenshots
+1. Ouvrez une invite PowerShell en tant qu'administrateur :
+   ```powershell
+   Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+   ```
+2. Lancez le script de votre choix :
+   - Version allégée standard :
+     ```powershell
+     .\tiny11maker.ps1
+     ```
+   - Version ultra-minimale :
+     ```powershell
+     .\tiny11Coremaker.ps1
+     ```
+3. Suivez les étapes à l'écran (lettre du lecteur ISO monté, index d'édition, injection optionnelle de pilotes).
+4. À la fin de la génération, le script vous propose de créer directement votre clé USB bootable avec `scripts\Create-Tiny11BootableUSB.ps1`.
 
-### Welcome
+---
 
-![Tiny11 Builder welcome screen with Tiny11, Tiny11 Core and Custom modes](docs/images/ui-welcome.png)
+## Création d'une clé USB bootable à partir d'une ISO existante
 
-### Components
+Vous pouvez à tout moment créer une clé USB bootable UEFI pour une ISO déjà générée :
+```powershell
+.\scripts\Create-Tiny11BootableUSB.ps1 -IsoPath ".\tiny11.iso"
+```
 
-![Component choices and the Tiny11 Core warning](docs/images/ui-components.png)
+---
 
-### Build settings
+## Application WinUI 3 compilée
 
-![Build settings with Turbo mode and optional image cleanup](docs/images/ui-build-settings.png)
+L'application graphique avec toutes les options graphiques et paramètres avancés se trouve dans :
+📂 [**`publish_new\Tiny11Builder.exe`**](file:///c:/Users/madtr/Desktop/Tiny11Builder%20fr/publish_new/Tiny11Builder.exe) (ou [**`publish\Tiny11Builder.exe`**](file:///c:/Users/madtr/Desktop/Tiny11Builder%20fr/publish/Tiny11Builder.exe)) (lancement avec élévation administrateur).
 
-## More information
+---
 
-[Usage, compatibility and build instructions](docs/usage.md) ·
-[Attribution and distribution notes](NOTICE.md)
+## Soutenir le projet original
 
-The original PowerShell builders remain in this repository.
-
-## Support the project
-
-Tiny11 Builder is free. If it saved you time, you can help fund development,
-testing across Windows releases and fixes for reported problems.
-
-**[Monthly support](https://github.com/sponsors/ntdevlabs)** ·
-**[One-time donation](https://ko-fi.com/ntdev)**
-
-Prefer another service? [Patreon](https://www.patreon.com/ntdev) ·
-[PayPal](https://paypal.me/ntdev2)
-
-No donation is needed to use any feature. Reporting reproducible bugs,
-testing builds in a VM and sharing the [demo](https://youtu.be/LfEWIz5mQ8A)
-help too.
+Tiny11 Builder est un projet open-source développé par [NTDEV](https://github.com/ntdevlabs).
+- **[Soutien GitHub Sponsors](https://github.com/sponsors/ntdevlabs)**
+- **[Don Ko-fi](https://ko-fi.com/ntdev)**

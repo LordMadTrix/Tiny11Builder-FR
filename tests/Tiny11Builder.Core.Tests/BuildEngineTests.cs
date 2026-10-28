@@ -1,4 +1,4 @@
-using System.Runtime.Versioning;
+﻿using System.Runtime.Versioning;
 using System.Text;
 using System.Text.Json;
 using Tiny11Builder.Core;
@@ -54,8 +54,8 @@ public sealed class BuildEngineTests
         var messages = new List<BuildProgress>();
         await fixture.Engine.BuildAsync(fixture.Recipe with { SelectedOptions = ["recall-feature"] },
             new ImmediateProgress<BuildProgress>(messages.Add), CancellationToken.None);
-        Assert.Contains(messages, m => m.Message == "Recall optional feature" && m.State == BuildOperationState.Skipped &&
-            m.Detail == "Not present in this image");
+        Assert.Contains(messages, m => (m.Message == "Fonctionnalité Recall (IA)" || m.Message == "Recall optional feature") && m.State == BuildOperationState.Skipped &&
+            (m.Detail == "Non présent dans cette image" || m.Detail == "Not present in this image"));
         Assert.DoesNotContain(fixture.Runner.Calls, c => c.Contains("/FeatureName:Recall"));
     }
 
@@ -220,7 +220,21 @@ internal sealed class BuildFixture : IDisposable
         Operations = new(Events);
         Engine = new(Runner, new FakeMediaFactory(), Registry, Operations, new FakeHost());
     }
-    public void Dispose() { if (AllowCleanup && Directory.Exists(Root)) Directory.Delete(Root, recursive: true); }
+    public void Dispose()
+    {
+        if (AllowCleanup && Directory.Exists(Root))
+        {
+            try
+            {
+                foreach (var f in new DirectoryInfo(Root).EnumerateFiles("*", SearchOption.AllDirectories))
+                {
+                    try { f.Attributes = FileAttributes.Normal; } catch { }
+                }
+                Directory.Delete(Root, recursive: true);
+            }
+            catch { }
+        }
+    }
     public static byte[] IsoBytes(int length = 65536)
     {
         var bytes = new byte[length];
@@ -290,12 +304,20 @@ internal sealed class FakeRunner(int build, string architecture, List<string> ev
         if (args.Contains("/Unmount-Image"))
         {
             var directory = Value("/MountDir:");
-            foreach (var relative in new[] { @"sources\setup.exe", @"Windows\System32\winpeshl.ini", @"Windows\System32\config\SYSTEM" })
-                if (File.Exists(Path.Combine(directory, relative))) File.Delete(Path.Combine(directory, relative));
-            foreach (var relative in new[] { @"sources", @"Windows\System32\config", @"Windows\System32", "Windows" })
+            if (Directory.Exists(directory))
             {
-                var entry = Path.Combine(directory, relative);
-                if (Directory.Exists(entry) && !Directory.EnumerateFileSystemEntries(entry).Any()) Directory.Delete(entry);
+                try
+                {
+                    foreach (var file in Directory.GetFiles(directory, "*", SearchOption.AllDirectories))
+                    {
+                        try { File.SetAttributes(file, FileAttributes.Normal); File.Delete(file); } catch { }
+                    }
+                    foreach (var dir in Directory.GetDirectories(directory))
+                    {
+                        try { Directory.Delete(dir, true); } catch { }
+                    }
+                }
+                catch { }
             }
         }
         if (args.Contains("/Get-MountedWimInfo"))

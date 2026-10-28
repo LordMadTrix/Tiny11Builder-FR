@@ -203,7 +203,7 @@ public sealed class ResumeRefusalTests
         {
             "SelectedOptions" => original with { SelectedOptions = ["copilot-app"] },
             "EnableNetFx3" => original with { EnableNetFx3 = true },
-            "PreferLocalAccount" => original with { PreferLocalAccount = true },
+            "PreferLocalAccount" => original with { PreferLocalAccount = !original.PreferLocalAccount },
             "TurboMode" => original with { TurboMode = true },
             "Flavor" => original with { Flavor = BuildFlavor.Core, CoreAcknowledged = true },
             "SourcePath" => original with { SourcePath = Path.Combine(fixture.Root, "other-source") },

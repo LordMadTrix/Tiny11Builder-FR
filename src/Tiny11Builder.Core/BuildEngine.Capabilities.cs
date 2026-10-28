@@ -10,23 +10,23 @@ public sealed partial class BuildEngine
         if (batch)
         {
             BatchRemovalResult? result = null;
-            await session.Tracking.RunBatchAsync(names.Select(name => (Id(name), $"Request capability removal: {name}")).ToArray(),
+            await session.Tracking.RunBatchAsync(names.Select(name => (Id(name), $"Supprimer la capacité : {name}")).ToArray(),
                 stage, async () =>
                 {
                     result = await session.Dism.RemoveCapabilitiesAsync(session.Mount, names, token).ConfigureAwait(false);
                 }, "capabilities", id => result?.Items.FirstOrDefault(item => Id(item.Name).Equals(id, StringComparison.OrdinalIgnoreCase))
-                    is { } item ? Sentence("verified " + item.Describe()) : null).ConfigureAwait(false);
+                    is { } item ? Sentence("vérifié " + item.Describe()) : null).ConfigureAwait(false);
             RecordCapabilities(session, result!.Items);
         }
         else
             foreach (var name in names)
             {
                 RemovalVerification? outcome = null;
-                await session.Tracking.RunAsync(Id(name), stage, $"Request capability removal: {name}", async () =>
+                await session.Tracking.RunAsync(Id(name), stage, $"Supprimer la capacité : {name}", async () =>
                 {
                     var result = await session.Dism.RemoveCapabilitiesAsync(session.Mount, [name], token).ConfigureAwait(false);
                     outcome = result.Items.Single();
-                }, () => Sentence("verified " + outcome!.Describe())).ConfigureAwait(false);
+                }, () => Sentence("vérifié " + outcome!.Describe())).ConfigureAwait(false);
                 RecordCapabilities(session, [outcome!]);
             }
     }

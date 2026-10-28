@@ -30,7 +30,11 @@ public static class PolicyCatalog
                 Machine(@"Policies\Microsoft\Windows\Windows Mail", "PreventRun", 1);
                 break;
             case "privacy":
-                Machine(@"Policies\Microsoft\Windows\DataCollection", "AllowTelemetry", 1);
+                Machine(@"Policies\Microsoft\Windows\DataCollection", "AllowTelemetry", 0);
+                Machine(@"Policies\Microsoft\Windows\DataCollection", "DoNotShowFeedbackNotifications", 1);
+                Machine(@"Policies\Microsoft\Windows\DataCollection", "MaxTelemetryAllowed", 0);
+                values.Add(new(PolicyHive.System, @"{ControlSet}\Services\DiagTrack", "Start", 4));
+                values.Add(new(PolicyHive.System, @"{ControlSet}\Services\dmwappushservice", "Start", 4));
                 Machine(@"Policies\Microsoft\Windows\AdvertisingInfo", "DisabledByGroupPolicy", 1);
                 User(@"Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo", "Enabled", 0);
                 User(@"Software\Microsoft\Windows\CurrentVersion\Privacy", "TailoredExperiencesWithDiagnosticDataEnabled", 0);
@@ -39,6 +43,10 @@ public static class PolicyCatalog
                 User(@"Software\Microsoft\InputPersonalization", "RestrictImplicitInkCollection", 1);
                 User(@"Software\Microsoft\InputPersonalization", "RestrictImplicitTextCollection", 1);
                 User(@"Software\Microsoft\InputPersonalization\TrainedDataStore", "HarvestContacts", 0);
+                User(@"Software\Microsoft\GameBar", "AllowAutoGameMode", 1);
+                User(@"System\GameConfigStore", "GameDVR_Enabled", 0);
+                Machine(@"Policies\Microsoft\Windows\GameDVR", "AllowGameDVR", 0);
+                User(@"Control Panel\Desktop", "MenuShowDelay", "0");
                 break;
             case "copilot":
                 Machine(@"Policies\Microsoft\Windows\WindowsCopilot", "TurnOffWindowsCopilot", 1);
@@ -64,7 +72,12 @@ public static class PolicyCatalog
                     Machine(@"Policies\Microsoft\Edge", name, 0);
                 break;
             case "oobe":
+                Machine(@"Microsoft\Windows\CurrentVersion\OOBE", "BypassNRO", 1);
+                Machine(@"Microsoft\Windows\CurrentVersion\OOBE", "DisableOOBEUpdate", 1);
+                Machine(@"Microsoft\Windows\CurrentVersion\OOBE", "HideOnlineAccountScreens", 1);
+                Machine(@"Microsoft\Windows\CurrentVersion\OOBE", "DisableVoice", 1);
                 Machine(@"Policies\Microsoft\Windows\OOBE", "DisablePrivacyExperience", 1);
+                Machine(@"Policies\Microsoft\Windows\OOBE", "ProtectYourPC", 3);
                 User(@"Software\Microsoft\Windows\CurrentVersion\UserProfileEngagement", "ScoobeSystemSettingEnabled", 0);
                 User(content, "SubscribedContent-310093Enabled", 0);
                 User(@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced", "TaskbarMn", 0);

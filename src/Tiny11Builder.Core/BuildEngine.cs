@@ -174,16 +174,16 @@ public sealed partial class BuildEngine
                 ImageItemKind.ProvisionedApp or ImageItemKind.Capability or ImageItemKind.Feature).ToArray();
             foreach (var (name, title) in new[]
             {
-                ("Copy media", "Copy installation media"), ("Export edition", "Export selected edition"),
-                ("Mount", "Mount working image"), ("Inventory", "Validate individual image actions"),
-                ("Custom servicing", "Apply individual servicing actions"), ("Remove apps", "Remove selected apps"),
-                ("Optional features", "Remove optional features and capabilities"),
-                ("Component cleanup", "Clean superseded component files"), (".NET 3.5", "Include .NET Framework 3.5"),
-                ("Windows settings", "Apply Windows settings"), ("Advanced payloads", "Remove selected payload files"),
-                ("Core pruning", "Trim Core component payloads"), ("Redundant data", "Remove redundant offline data"),
-                ("Commit", "Save image changes"),
-                ("Setup image", "Apply Windows Setup settings"), ("Compress", "Compress the final image"),
-                ("Create ISO", "Create bootable ISO"), ("Verify output", "Verify and publish the ISO")
+                ("Copy media", "Copier le support d'installation"), ("Export edition", "Exporter l'édition sélectionnée"),
+                ("Mount", "Monter l'image de travail"), ("Inventory", "Valider les actions individuelles"),
+                ("Custom servicing", "Appliquer les actions personnalisées"), ("Remove apps", "Supprimer les applications sélectionnées"),
+                ("Optional features", "Supprimer les fonctionnalités et capacités facultatives"),
+                ("Component cleanup", "Nettoyer les fichiers de composants obsolètes"), (".NET 3.5", "Intégrer .NET Framework 3.5"),
+                ("Windows settings", "Appliquer les paramètres Windows"), ("Advanced payloads", "Supprimer les fichiers de charge utile"),
+                ("Core pruning", "Élaguer les composants Core"), ("Redundant data", "Supprimer les données hors-ligne redondantes"),
+                ("Commit", "Enregistrer les modifications de l'image"),
+                ("Setup image", "Configurer l'installation de Windows"), ("Compress", "Compresser l'image finale"),
+                ("Create ISO", "Créer l'ISO amorçable"), ("Verify output", "Vérifier et publier l'ISO")
             }.Where(entry => entry.Item1 switch
             {
                 "Inventory" => recipe.ExpertActions.Length > 0,
@@ -290,14 +290,14 @@ public sealed partial class BuildEngine
                 DismClient.ParseApps(await dism.RunAsync(token, $"/Image:{mount}", "/Get-ProvisionedAppxPackages").ConfigureAwait(false)) : [];
             var appsToRemove = apps.Where(app => appOptions.Any(option => CleanupCatalog.MatchesApp(option, app)))
                 .DistinctBy(app => app.PackageName).ToArray();
-            foreach (var app in appsToRemove) tracking.Plan("app:" + app.PackageName, "Remove apps", $"Remove {app.DisplayName} ({app.PackageName})");
+            foreach (var app in appsToRemove) tracking.Plan("app:" + app.PackageName, "Remove apps", $"Supprimer {app.DisplayName} ({app.PackageName})");
             foreach (var option in appOptions)
             {
                 var matching = apps.Where(a => CleanupCatalog.MatchesApp(option, a)).ToArray();
-                if (matching.Length == 0) tracking.Skip("missing-app:" + option.Id, "Remove apps", option.Title, "Not present in this image");
+                if (matching.Length == 0) tracking.Skip("missing-app:" + option.Id, "Remove apps", option.Title, "Non présent dans cette image");
             }
             foreach (var app in appsToRemove)
-                await tracking.RunAsync("app:" + app.PackageName, "Remove apps", $"Remove {app.DisplayName} ({app.PackageName})",
+                await tracking.RunAsync("app:" + app.PackageName, "Remove apps", $"Supprimer {app.DisplayName} ({app.PackageName})",
                     () => dism.RunAsync(token, $"/Image:{mount}", "/Remove-ProvisionedAppxPackage", $"/PackageName:{app.PackageName}")).ConfigureAwait(false);
             Stage("Optional features", "Detecting actual features and capabilities; unavailable choices are reported, not guessed.");
             var featureOptions = CleanupCatalog.Options.Where(o => o.Kind == OptionKind.Feature && recipe.SelectedOptions.Contains(o.Id)).ToArray();
@@ -321,26 +321,26 @@ public sealed partial class BuildEngine
             {
                 var outcome = new RemovalVerification(pending.Identity, pending.Detail, RemovalProof.Pending);
                 await tracking.RunAsync("capability:" + pending.Identity, "Optional features",
-                    $"Capability removal already deferred: {pending.Identity}", () => Task.CompletedTask,
+                    $"Suppression déjà différée de la capacité : {pending.Identity}", () => Task.CompletedTask,
                     () => Sentence(outcome.Describe())).ConfigureAwait(false);
                 RecordCapabilities(session, [outcome]);
             }
-            foreach (var name in featureNames) tracking.Plan("feature:" + name, "Optional features", $"Remove optional feature: {name}");
+            foreach (var name in featureNames) tracking.Plan("feature:" + name, "Optional features", $"Supprimer la fonctionnalité : {name}");
             foreach (var capability in removalCapabilities)
-                tracking.Plan("capability:" + capability.Identity, "Optional features", $"Request capability removal: {capability.Identity}");
+                tracking.Plan("capability:" + capability.Identity, "Optional features", $"Supprimer la capacité : {capability.Identity}");
             foreach (var option in featureOptions)
             {
                 var matching = option.Targets.Where(features.ContainsKey).ToArray();
-                if (matching.Length == 0) tracking.Skip("missing-feature:" + option.Id, "Optional features", option.Title, "Not present in this image");
+                if (matching.Length == 0) tracking.Skip("missing-feature:" + option.Id, "Optional features", option.Title, "Non présent dans cette image");
             }
             var activeFeatures = featureNames.Where(feature => !features[feature].Equals("Disabled with Payload Removed", StringComparison.OrdinalIgnoreCase)).ToArray();
             foreach (var feature in featureNames.Except(activeFeatures, StringComparer.OrdinalIgnoreCase))
-                tracking.Skip("feature:" + feature, "Optional features", feature, "Payload already removed");
+                tracking.Skip("feature:" + feature, "Optional features", feature, "Fichiers déjà retirés");
             if (recipe.TurboMode && activeFeatures.Length > 1)
             {
                 Log($"Turbo feature batch: {string.Join(", ", activeFeatures)}");
                 FeatureBatchResult? featureBatch = null;
-                await tracking.RunBatchAsync(activeFeatures.Select(feature => ("feature:" + feature, $"Remove optional feature: {feature}")).ToArray(),
+                await tracking.RunBatchAsync(activeFeatures.Select(feature => ("feature:" + feature, $"Supprimer la fonctionnalité : {feature}")).ToArray(),
                     "Optional features", async () =>
                     {
                         featureBatch = await dism.DisableFeaturesWithStatesAsync(mount, activeFeatures, token).ConfigureAwait(false);
@@ -353,7 +353,7 @@ public sealed partial class BuildEngine
             }
             else
                 foreach (var feature in activeFeatures)
-                    await tracking.RunAsync("feature:" + feature, "Optional features", $"Remove optional feature: {feature}",
+                    await tracking.RunAsync("feature:" + feature, "Optional features", $"Supprimer la fonctionnalité : {feature}",
                         () => dism.RunAsync(token, $"/Image:{mount}", "/Disable-Feature", $"/FeatureName:{feature}", "/Remove", "/NoRestart")).ConfigureAwait(false);
             foreach (var option in capabilityOptions)
             {
@@ -361,7 +361,7 @@ public sealed partial class BuildEngine
                                                                          c.Name.StartsWith(p + "~", StringComparison.OrdinalIgnoreCase))) &&
                     !removalCapabilities.Any(c => option.Targets.Any(p => c.Identity.StartsWith(p + ".", StringComparison.OrdinalIgnoreCase) ||
                                                                          c.Identity.StartsWith(p + "~", StringComparison.OrdinalIgnoreCase))))
-                    tracking.Skip("missing-capability:" + option.Id, "Optional features", option.Title, "No matching installed capability");
+                    tracking.Skip("missing-capability:" + option.Id, "Optional features", option.Title, "Aucune capacité correspondante installée");
             }
             await RemoveCapabilitiesAsync(session, removalCapabilities.Select(c => c.Identity).ToArray(),
                 recipe.TurboMode, "Optional features", token).ConfigureAwait(false);
@@ -381,6 +381,12 @@ public sealed partial class BuildEngine
                 await dism.RunAsync(token, $"/Image:{mount}", "/Enable-Feature", "/FeatureName:NetFx3", "/All",
                     "/LimitAccess", $"/Source:{sxs}", "/NoRestart").ConfigureAwait(false);
             }
+            if (!string.IsNullOrWhiteSpace(recipe.DriverPath) && Directory.Exists(recipe.DriverPath))
+            {
+                Stage("Custom servicing", "Injecting custom drivers into offline image.");
+                Log($"Injecting drivers from: {recipe.DriverPath}");
+                await dism.RunAsync(token, $"/Image:{mount}", "/Add-Driver", $"/Driver:{recipe.DriverPath}", "/Recurse").ConfigureAwait(false);
+            }
             Stage("Windows settings", "Applying selected registry settings to the offline image.");
             await tracking.RunAsync("registry:settings", "Windows settings", "Apply and verify offline Windows settings",
                 () =>
@@ -388,7 +394,48 @@ public sealed partial class BuildEngine
                     registry.Apply(mount, recipe, Log);
                     return Task.CompletedTask;
                 }).ConfigureAwait(false);
-            File.WriteAllText(Path.Combine(staging, "autounattend.xml"), UnattendBuilder.Create(image, recipe));
+            var unattendXml = UnattendBuilder.Create(image, recipe);
+            File.WriteAllText(Path.Combine(staging, "autounattend.xml"), unattendXml);
+            var windowsDir = Path.Combine(mount, "Windows");
+            if (Directory.Exists(windowsDir))
+            {
+                var sysprepDir = Path.Combine(windowsDir, @"System32\Sysprep");
+                if (Directory.Exists(sysprepDir))
+                {
+                    File.WriteAllText(Path.Combine(sysprepDir, "autounattend.xml"), unattendXml);
+                    File.WriteAllText(Path.Combine(sysprepDir, "unattend.xml"), unattendXml);
+                }
+                var pantherDir = Path.Combine(windowsDir, "Panther");
+                if (!Directory.Exists(pantherDir)) Directory.CreateDirectory(pantherDir);
+                File.WriteAllText(Path.Combine(pantherDir, "unattend.xml"), unattendXml);
+
+                var scriptsDir = Path.Combine(windowsDir, @"Setup\Scripts");
+                SetupScriptBuilder.Write(Path.Combine(scriptsDir, "SetupComplete.cmd"), recipe);
+            }
+            if (!string.IsNullOrWhiteSpace(recipe.DefenderControlPath) && Directory.Exists(recipe.DefenderControlPath))
+            {
+                Stage("Windows settings", "Intégration de Defender Control dans l'image système.");
+                Log($"Intégration de Defender Control depuis : {recipe.DefenderControlPath}");
+                var toolsTarget = Path.Combine(mount, @"Tools\Defender Control");
+                Directory.CreateDirectory(toolsTarget);
+                foreach (var file in Directory.GetFiles(recipe.DefenderControlPath))
+                {
+                    File.Copy(file, Path.Combine(toolsTarget, Path.GetFileName(file)), overwrite: true);
+                }
+            }
+            if (recipe.InstallMadTweak && !string.IsNullOrWhiteSpace(recipe.MadTweakPath) && File.Exists(recipe.MadTweakPath))
+            {
+                Stage("Windows settings", "Intégration de MadTweak dans l'image système.");
+                Log($"Intégration de MadTweak depuis : {recipe.MadTweakPath}");
+                var madTarget = Path.Combine(mount, @"Tools\MadTweak");
+                Directory.CreateDirectory(madTarget);
+                File.Copy(recipe.MadTweakPath, Path.Combine(madTarget, "MadTweak.exe"), overwrite: true);
+                var scriptDist = Path.Combine(Path.GetDirectoryName(recipe.MadTweakPath)!, "MadTweak.ps1");
+                if (File.Exists(scriptDist))
+                {
+                    File.Copy(scriptDist, Path.Combine(madTarget, "MadTweak.ps1"), overwrite: true);
+                }
+            }
             Stage("Advanced payloads", "Applying original-builder and expert payload removals to the offline copy only.");
             if (RemovesComponentPayloads(recipe)) await EnsureNoPendingOperationsAsync(session, token).ConfigureAwait(false);
             imageOperations.RemoveOriginalFiles(mount, image.Architecture, OriginalFileOptions(session), Log, recipe.TurboMode);
